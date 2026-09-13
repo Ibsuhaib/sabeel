@@ -48,8 +48,8 @@ function Heatmap({ log, month, onMonth }) {
   return (
     <Section title={month.toLocaleDateString([], { month: 'long', year: 'numeric' })} action={
       <div className="flex gap-1">
-        <button onClick={() => onMonth(new Date(year, m - 1, 1))} className="tap p-1 text-muted"><Icon name="back" size={16} /></button>
-        <button onClick={() => onMonth(new Date(year, m + 1, 1))} className="tap p-1 text-muted"><Icon name="forward" size={16} /></button>
+        <button onClick={() => onMonth(new Date(year, m - 1, 1))} aria-label="Previous month" className="tap touch-min grid place-items-center text-muted"><Icon name="back" size={16} /></button>
+        <button onClick={() => onMonth(new Date(year, m + 1, 1))} aria-label="Next month" className="tap touch-min grid place-items-center text-muted"><Icon name="forward" size={16} /></button>
       </div>
     }>
       <Card className="mx-4 p-4">

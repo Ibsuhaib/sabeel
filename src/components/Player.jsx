@@ -119,7 +119,7 @@ function PlayerSheet({ open, onClose, state: s, catalogue, ayahCount, surahName,
         {[['controls', 'Controls'], ['range', 'Ayah range'], ['reciter', 'Reciter']].map(([id, label]) => (
           <button
             key={id} onClick={() => setTab(id)}
-            className={`tap px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
+            className={`tap chip px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
               tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
             }`}
           >{label}</button>

@@ -27,7 +27,7 @@ export function Header({ title, subtitle, back, actions, sticky = true, large = 
 }
 
 export function IconButton({ name, label, onClick, to, active, size = 20, className = '' }) {
-  const cls = `tap p-2 rounded-full transition-colors ${active ? 'text-brand' : 'text-muted hover:text-ink'} active:bg-surf ${className}`
+  const cls = `tap touch-min grid place-items-center rounded-full transition-colors ${active ? 'text-brand' : 'text-muted hover:text-ink'} active:bg-surf ${className}`
   if (to) return <Link to={to} aria-label={label} title={label} className={cls}><Icon name={name} size={size} fill={active ? 'currentColor' : 'none'} /></Link>
   return <button onClick={onClick} aria-label={label} title={label} className={cls}><Icon name={name} size={size} fill={active ? 'currentColor' : 'none'} /></button>
 }
@@ -107,7 +107,13 @@ export function LoadError({ message, onRetry, back = true }) {
 
 export function Button({ children, onClick, to, variant = 'primary', size = 'md', className = '', ...rest }) {
   const base = 'tap inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors disabled:opacity-40'
-  const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2.5 text-sm', lg: 'px-5 py-3 text-[15px] w-full' }
+  // Heights are floors, not paddings: Android asks for 48dp, iOS 44pt, and an
+  // audit found these buttons landing at 28–30px.
+  const sizes = {
+    sm: 'px-3.5 py-2 text-xs min-h-[38px]',
+    md: 'px-4 py-2.5 text-sm min-h-[42px]',
+    lg: 'px-5 py-3 text-[15px] w-full min-h-[48px]'
+  }
   const variants = {
     primary: 'bg-brand text-bg hover:opacity-90',
     soft: 'bg-surf border border-line text-ink hover:border-brand/50',
@@ -188,9 +194,9 @@ export function Choice({ options, value, onChange, columns = 2 }) {
 export function Stepper({ value, onChange, min = -60, max = 60, suffix = '' }) {
   return (
     <div className="flex items-center gap-1">
-      <button onClick={() => onChange(Math.max(min, value - 1))} className="tap p-1.5 rounded-lg bg-bg border border-line text-muted"><Icon name="minus" size={14} /></button>
+      <button onClick={() => onChange(Math.max(min, value - 1))} className="tap touch-min grid place-items-center rounded-lg bg-bg border border-line text-muted"><Icon name="minus" size={14} /></button>
       <span className="w-14 text-center text-sm tabular-nums">{value > 0 ? '+' : ''}{value}{suffix}</span>
-      <button onClick={() => onChange(Math.min(max, value + 1))} className="tap p-1.5 rounded-lg bg-bg border border-line text-muted"><Icon name="plus" size={14} /></button>
+      <button onClick={() => onChange(Math.min(max, value + 1))} className="tap touch-min grid place-items-center rounded-lg bg-bg border border-line text-muted"><Icon name="plus" size={14} /></button>
     </div>
   )
 }

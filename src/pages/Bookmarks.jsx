@@ -33,7 +33,7 @@ export default function Bookmarks() {
         {[['quran', 'Ayahs'], ['hadith', 'Hadith'], ['notes', 'Notes']].map(([id, label]) => (
           <button
             key={id} onClick={() => setTab(id)}
-            className={`tap px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
+            className={`tap chip px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
               tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
             }`}
           >

@@ -1,0 +1,91 @@
+name: Android APK
+
+# Builds an installable APK and attaches it to the workflow run, so it can be
+# downloaded from the repository without anyone needing Android Studio.
+# Push a tag like v0.1.0 and it also becomes a GitHub Release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+
+      # The APK must work with no network at all, so every dataset is fetched
+      # and baked into the bundle here — including the 74 MB hadith corpus that
+      # is deliberately not in git.
+      - name: Fetch all data
+        run: npm run data:all
+
+      - name: Tests
+        run: npm test
+
+      - name: Build web bundle
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: |
+          npx cap sync android
+          node scripts/android-setup.mjs
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Name the APK
+        id: apk
+        run: |
+          SRC=$(find android -name "*-debug.apk" | head -1)
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = "tag" ] || VERSION="$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          DEST="sabeel-${VERSION}.apk"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "$DEST" | cut -f1)" >> "$GITHUB_OUTPUT"
+          echo "Built $DEST ($(du -h "$DEST" | cut -f1))"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sabeel-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 90
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.path }}
+          body: |
+            **Sabeel ${{ github.ref_name }}** — Quran, Hadith, Prayer and Dua.
+
+            Download the `.apk` below and open it on your Android phone. You will
+            need to allow installing from your browser or file manager the first
+            time, because this is not distributed through the Play Store.
+
+            This build is **fully offline**: the Quran, all 36,512 hadith, duas,
+            prayer calculation, fonts and the adhan are inside the app. Only
+            recitation streams, and anything you play is kept on the device.
+
+            APK size: ${{ steps.apk.outputs.size }}. Debug-signed — Android will
+            warn that it is from an unknown developer, which is expected until
+            the project has a release keystore.

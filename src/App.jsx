@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import TabBar from './components/TabBar.jsx'
 import Player from './components/Player.jsx'
 import { useReciterSync } from './lib/reciters.js'
 import { usePrayerNotifications } from './lib/usePrayerNotifications.js'
-import { applyNativeChrome } from './lib/native.js'
+import { applyNativeChrome, wireBackButton } from './lib/native.js'
 import { Loading } from './components/ui.jsx'
 import { useSettings } from './lib/settings.jsx'
 
@@ -48,6 +48,7 @@ export default function App() {
   // Match the Android status bar to the theme and dismiss the splash once React
   // has actually painted something.
   useEffect(() => { applyNativeChrome(settings.theme) }, [settings.theme])
+  const exitHint = useAndroidBack()
   if (!settings.onboarded) return <Onboarding />
 
   return (
@@ -92,6 +93,46 @@ export default function App() {
       </Suspense>
       <Player />
       <TabBar />
+      {exitHint && (
+        <div className="fixed bottom-24 inset-x-0 z-50 flex justify-center pointer-events-none px-4">
+          <span className="px-4 py-2 rounded-full bg-surf border border-line text-xs text-muted shadow-lg">
+            Press back again to close Sabeel
+          </span>
+        </div>
+      )}
     </div>
   )
+}
+
+// Android's hardware back button. Without this, back closes the app from any
+// screen, which reads as a crash. Here it unwinds the app's own history and
+// only exits from home, on a second press — the convention Android users expect.
+function useAndroidBack() {
+  const nav = useNavigate()
+  const location = useLocation()
+  const depth = useRef(0)
+  const [hint, setHint] = useState(false)
+
+  // Track how far in we are, so we never pop past the app's first screen.
+  useEffect(() => { depth.current += 1 }, [location.key])
+
+  useEffect(() => {
+    let dispose = () => {}
+    let alive = true
+    wireBackButton({
+      atRoot: () => window.location.hash === '' || window.location.hash === '#/' ,
+      canGoBack: () => depth.current > 1,
+      goBack: () => { depth.current = Math.max(1, depth.current - 2); nav(-1) },
+      toRoot: () => nav('/')
+    }).then(off => { if (alive) dispose = off; else off() })
+
+    const onHint = () => {
+      setHint(true)
+      setTimeout(() => setHint(false), 2000)
+    }
+    window.addEventListener('sabeel:press-back-again', onHint)
+    return () => { alive = false; dispose(); window.removeEventListener('sabeel:press-back-again', onHint) }
+  }, [nav])
+
+  return hint
 }

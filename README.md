@@ -62,6 +62,23 @@ Two honest limits worth stating plainly:
 
 ---
 
+## Install it on Android
+
+Grab the APK from the [Releases page](../../releases), or from the
+[Android APK workflow](../../actions/workflows/android.yml) — open the most recent run and
+download `sabeel-apk` under Artifacts. Open the `.apk` on your phone and allow installing from
+your browser when asked, since this is not distributed through the Play Store.
+
+That build is **fully offline**. The Quran, all 36,512 hadith, the duas, prayer calculation, the
+Arabic fonts and the adhan are all inside the app — roughly 81 MB of data baked in. Only
+recitation streams, and anything you play is kept on the device afterwards.
+
+To build it yourself you need a JDK and the Android SDK:
+
+```bash
+npm run android:apk      # builds dist, syncs Capacitor, runs gradle
+```
+
 ## Running it
 
 ```bash

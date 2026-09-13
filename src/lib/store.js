@@ -37,7 +37,33 @@ export const store = {
   },
 
   async lastRead() { return await get(K.lastRead) },
-  async setLastRead(v) { return set(K.lastRead, { ...v, at: Date.now() }) },
+
+  // Recording where you are also advances an active khatm plan, so the plan
+  // reflects what you actually read rather than only what you remembered to
+  // tap. Opt-out lives on the plan itself.
+  async setLastRead(v) {
+    await set(K.lastRead, { ...v, at: Date.now() })
+    if (v?.page) await this.syncKhatm(v.page)
+    return v
+  },
+
+  async syncKhatm(page) {
+    try {
+      const raw = await get(K.khatm)
+      if (!raw) return null
+      const { normalise, markPage } = await import('./khatm.js')
+      const plan = normalise(raw)
+      // A page counts once you have read past it, so the plan advances to the
+      // page *before* the one currently on screen.
+      const reached = Math.max(0, Number(page) - 1)
+      if (!plan || !plan.autoSync || plan.paused || reached <= plan.page) return plan
+      const next = markPage(plan, reached)
+      await set(K.khatm, next)
+      return next
+    } catch {
+      return null
+    }
+  },
 
   async prayerLog() { return (await get(K.prayerLog)) || {} },
   async logPrayer(dateKey, prayer, state) {
@@ -60,7 +86,17 @@ export const store = {
     return n
   },
 
-  async khatm() { return await get(K.khatm) },
+  // Always normalised on the way out, so a corrupt or older-version plan can
+  // never reach the UI.
+  async khatm() {
+    const raw = await get(K.khatm)
+    if (!raw) return null
+    const { normalise } = await import('./khatm.js')
+    const plan = normalise(raw)
+    if (!plan) { await del(K.khatm); return null }
+    return plan
+  },
+
   async setKhatm(v) { return v ? set(K.khatm, v) : del(K.khatm) },
 
   async offlineCollections() { return (await get(K.offlineCollections)) || [] },

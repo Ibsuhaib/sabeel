@@ -48,7 +48,7 @@ export function GradeList({ grades, sahihByCompilation, collectionName }) {
           </span>
         ))}
         {grades.length > 2 && (
-          <button onClick={() => setOpen(!open)} className="tap px-2 py-1 rounded-lg border border-line text-[11px] text-muted">
+          <button onClick={() => setOpen(!open)} className="tap chip px-2.5 py-1 rounded-lg border border-line text-[11px] text-muted">
             {open ? 'Show fewer' : `+${grades.length - 2} more gradings`}
           </button>
         )}
@@ -76,10 +76,10 @@ export default function HadithCard({ hadith, collection, book, bookmarked, onBoo
           {hadith.n}
         </span>
         <span className="text-[11px] text-muted truncate flex-1">{book?.title}</span>
-        <button onClick={onBookmark} className={`tap p-1.5 rounded-lg ${bookmarked ? 'text-brand' : 'text-muted'}`} aria-label="Save hadith">
+        <button onClick={onBookmark} className={`tap touch-min grid place-items-center rounded-lg ${bookmarked ? 'text-brand' : 'text-muted'}`} aria-label="Save hadith">
           <Icon name="bookmark" size={16} fill={bookmarked ? 'currentColor' : 'none'} />
         </button>
-        <button onClick={copy} className="tap p-1.5 rounded-lg text-muted" aria-label="Copy hadith">
+        <button onClick={copy} className="tap touch-min grid place-items-center rounded-lg text-muted" aria-label="Copy hadith">
           <Icon name={copied ? 'check' : 'copy'} size={16} />
         </button>
       </div>

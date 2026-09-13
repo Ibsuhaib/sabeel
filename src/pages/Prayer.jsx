@@ -109,7 +109,7 @@ export default function Prayer() {
                   ].map(([id, label]) => (
                     <button
                       key={id} onClick={() => mark(p.id, id)}
-                      className={`tap flex-1 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                      className={`tap chip flex-1 py-1.5 rounded-lg text-[11px] border transition-colors ${
                         state === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
                       }`}
                     >{label}</button>

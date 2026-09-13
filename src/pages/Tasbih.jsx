@@ -45,7 +45,7 @@ export default function Tasbih() {
             <button
               key={p.label}
               onClick={() => setState(s => ({ ...s, label: p.label, target: p.target, count: 0 }))}
-              className={`tap shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors ${
+              className={`tap shrink-0 chip px-3 py-1.5 rounded-full text-xs border transition-colors ${
                 state.label === p.label ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
               }`}
             >{p.label}</button>
@@ -87,7 +87,7 @@ export default function Tasbih() {
                 <button
                   key={t}
                   onClick={() => setState(s => ({ ...s, target: t, count: 0 }))}
-                  className={`tap px-2.5 py-1 rounded-lg text-xs tabular-nums border ${
+                  className={`tap chip px-2.5 py-1 rounded-lg text-xs tabular-nums border ${
                     state.target === t ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
                   }`}
                 >{t}</button>

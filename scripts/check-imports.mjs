@@ -38,7 +38,13 @@ let problems = 0
 
 for (const file of sources(path.join(ROOT, 'src'))) {
   const src = fs.readFileSync(file, 'utf8')
-  const importBlock = [...src.matchAll(/import\s+([\s\S]*?)\s+from\s+['"][^'"]+['"]/g)].map(m => m[1]).join(' ')
+  // Static imports, and dynamic ones — `const { markPage } = await import(...)`
+  // is just as much an import as the declared kind.
+  const importBlock = [
+    ...[...src.matchAll(/import\s+([\s\S]*?)\s+from\s+['"][^'"]+['"]/g)].map(m => m[1]),
+    ...[...src.matchAll(/(?:const|let|var)\s*(\{[^}]*\})\s*=\s*await\s+import\s*\(/g)].map(m => m[1])
+  ].join(' ')
+
   // Strip the import statements before looking for usage, or a module path like
   // '../components/Player.jsx' reads as a use of `Player`.
   const body = src.replace(/^\s*import\s[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
@@ -50,7 +56,16 @@ for (const file of sources(path.join(ROOT, 'src'))) {
     if (!usedAsJsx && !usedAsCall && !usedAsMember) continue
 
     if (word(id).test(importBlock)) continue
-    if (new RegExp(`(?:function|const|let|var|class)\\s+${id}(?![\\w$])`).test(body)) continue
+
+    // Declared locally? Covers `const x` / `function x`, and destructuring —
+    // `const [progress, setProgress] = useState()` declares `progress` too.
+    const declared = new RegExp(
+      `(?:function|const|let|var|class)\\s+${id}(?![\\w$])` +
+      `|(?:const|let|var)\\s*[[{][^\\]}]*(?<![\\w$])${id}(?![\\w$])[^\\]}]*[\\]}]\\s*=` +
+      `|function\\s*\\w*\\s*\\([^)]*(?<![\\w$])${id}(?![\\w$])` +
+      `|\\([^)]*(?<![\\w$])${id}(?![\\w$])[^)]*\\)\\s*=>`
+    )
+    if (declared.test(body)) continue
 
     console.error(`   ✗ ${path.relative(ROOT, file).replace(/\\/g, '/')} uses "${id}" but never imports or declares it`)
     problems++

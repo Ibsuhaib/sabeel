@@ -82,7 +82,7 @@ export default function Search() {
           {TABS.map(t => (
             <button
               key={t.id} onClick={() => { setTab(t.id); setParams({ q, tab: t.id }, { replace: true }) }}
-              className={`tap px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
+              className={`tap chip px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
                 tab === t.id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
               }`}
             >{t.label}</button>

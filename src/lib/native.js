@@ -170,6 +170,34 @@ export async function onNotificationTap(handler) {
   } catch { return () => {} }
 }
 
+// Android's hardware back button. Without handling it, back closes the whole
+// app from any screen, which on Android reads as a crash. Here it walks the
+// history first and only exits from the home screen — and then only on a second
+// press, the convention every Android user already knows.
+export async function wireBackButton({ canGoBack, goBack, atRoot, toRoot }) {
+  if (!(await core())) return () => {}
+  let App
+  try { ({ App } = await import('@capacitor/app')) } catch { return () => {} }
+
+  let armed = false
+  let timer = null
+
+  const sub = await App.addListener('backButton', () => {
+    if (!atRoot()) {
+      if (canGoBack()) goBack()
+      else toRoot()
+      return
+    }
+    if (armed) { App.exitApp(); return }
+    armed = true
+    clearTimeout(timer)
+    timer = setTimeout(() => { armed = false }, 2000)
+    try { window.dispatchEvent(new CustomEvent('sabeel:press-back-again')) } catch { /* ignore */ }
+  })
+
+  return () => { clearTimeout(timer); sub.remove() }
+}
+
 // Native chrome polish — a status bar that matches the theme rather than a
 // white strip above a dark app.
 export async function applyNativeChrome(theme) {

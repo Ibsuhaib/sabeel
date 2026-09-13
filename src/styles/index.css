@@ -102,6 +102,27 @@ body {
 
 .tap { -webkit-tap-highlight-color: transparent; }
 
+/* ---- Touch targets -------------------------------------------------------
+   Android asks for 48dp and iOS for 44pt. An audit of every route found chips,
+   icon buttons and steppers rendering at 16–30px: fine with a mouse, miserable
+   with a thumb. These give them a floor without changing how they look.
+   touch-action also removes the legacy 300ms tap delay.                      */
+button, a[href], [role='button'], select, summary {
+  touch-action: manipulation;
+}
+
+.touch-min {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* The ayah number medallion */
 .ayah-mark {
   display: inline-flex; align-items: center; justify-content: center;

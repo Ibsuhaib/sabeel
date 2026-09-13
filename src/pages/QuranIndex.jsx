@@ -93,7 +93,7 @@ export default function QuranIndex() {
         {[['surah', 'Surah'], ['juz', 'Juz']].map(([id, label]) => (
           <button
             key={id} onClick={() => setTab(id)}
-            className={`tap px-4 py-1.5 rounded-full text-sm border transition-colors ${
+            className={`tap chip px-4 py-1.5 rounded-full text-sm border transition-colors ${
               tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
             }`}
           >{label}</button>

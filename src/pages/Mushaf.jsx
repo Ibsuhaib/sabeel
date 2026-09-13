@@ -194,7 +194,7 @@ export default function Mushaf() {
         <Button variant="soft" size="sm" onClick={() => go(-1)} disabled={page <= 1}>
           <Icon name="forward" size={14} />Previous
         </Button>
-        <button onClick={() => setSheet('jump')} className="tap text-xs text-muted tabular-nums px-3">
+        <button onClick={() => setSheet('jump')} className="tap chip text-xs text-muted tabular-nums px-4">
           {page} / {TOTAL_PAGES}
         </button>
         <Button variant="soft" size="sm" onClick={() => go(1)} disabled={page >= TOTAL_PAGES}>
@@ -268,7 +268,7 @@ function JumpSheet({ open, onClose, meta, current, onJump }) {
         {[['surah', 'Surah'], ['juz', 'Juz'], ['page', 'Page']].map(([id, label]) => (
           <button
             key={id} onClick={() => setTab(id)}
-            className={`tap px-3.5 py-1.5 rounded-full text-xs border ${
+            className={`tap chip px-3.5 py-1.5 rounded-full text-xs border ${
               tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
             }`}
           >{label}</button>
