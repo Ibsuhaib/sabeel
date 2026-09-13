@@ -74,6 +74,24 @@ Sunan an-Nasa'i, Sunan Ibn Majah, Muwatta Malik, 40 Hadith Nawawi, 40 Hadith Qud
 | Per-ayah recitation, 39 reciters | EveryAyah.com | ⚠️ | Streamed directly from EveryAyah; **we do not host, rehost or bundle any audio.** Files are cached on the user's own device by the service worker after they play them, the same as any browser cache. Action: if the app ever bundles audio for offline packs, that needs explicit permission first. |
 | Full-surah recitation, 3 reciters | mp3quran.net | ⚠️ | Same arrangement: streamed from their servers, never rehosted. Used only for imams whose complete muṣḥaf is not published ayah by ayah anywhere — currently Bandar Balilah and Abdullah Khayyat of Masjid al-Haram. Action: confirm they are content with the traffic before any large launch. |
 
+## Adhan (notification sound)
+
+| Item | Source | Status | Notes |
+|---|---|---|---|
+| Adhan by Aaqib Azeez | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3) | ✅ | **CC BY-SA 4.0**, uploaded as own work. Downloaded at build time and self-hosted so the adhan still sounds with no signal. Attribution is shown in the app on the notification settings screen, as the licence requires. |
+
+**A warning for anyone adding another adhan.** Adhan audio is the easiest place in this project
+to ship something you have no right to. While looking for a recording, `cdn.aladhan.com/audio/adhans/a3.mp3`
+— served as an adhan — turned out to carry an ID3 tag identifying it as *"Call To Prayers"* from
+**Karl Jenkins' "The Armed Man: A Mass For Peace" (2001)**, a copyrighted classical work, and the
+other files in that folder carry no identifying tags at all. A second candidate on Commons,
+"Call to prayer by Sabah Fakhry", is marked public domain but credited to YouTube, which is not a
+claim that can be relied on for a famous singer's recording. Neither is shipped.
+
+Rule for this directory: **a recording ships only if its licence is stated somewhere checkable and
+its author is identified.** Users who want a particular muadhdhin can load their own file, which
+never leaves their device.
+
 ## Fonts
 
 | Item | Source | Status | Notes |

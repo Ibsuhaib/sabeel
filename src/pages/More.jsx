@@ -14,6 +14,7 @@ export default function More() {
         <Card className="mx-4 divide-y divide-line overflow-hidden">
           <Row icon="compass" title="Qibla" subtitle="Direction of the Kaaba from where you are" to="/qibla" />
           <Row icon="chart" title="Prayer tracker" subtitle="Monthly heatmap, streaks and qada count" to="/tracker" />
+          <Row icon="prayer" title="Prayer notifications" subtitle="Adhan, chime or silent — you choose" to="/notifications" />
           <Row icon="calendar" title="Monthly timetable" subtitle="Printable prayer times for the month" to="/prayer/timetable" />
           <Row icon="counter" title="Tasbih" subtitle="Counter with haptics and targets" to="/dua/tasbih" />
         </Card>

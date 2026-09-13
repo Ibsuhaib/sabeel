@@ -24,6 +24,7 @@ jobs:
       - name: Fetch data
         run: npm run data:all
 
+      # Catches missing imports, which a green `vite build` does not.
       - name: Contract tests
         run: npm test
 

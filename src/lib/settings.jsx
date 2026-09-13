@@ -21,7 +21,16 @@ export const DEFAULTS = {
   adjustments: { fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
   location: null,                // { lat, lng, label }
   hijriOffset: 0,
-  notifications: false,
+  notifications: {
+    enabled: false,
+    sound: 'adhan',            // adhan | beep | silent
+    useCustomAdhan: false,     // the user's own file, kept in IndexedDB
+    volume: 1,
+    vibrate: true,
+    reminderMinutes: 0,        // "prayer is in N minutes" nudge, 0 = off
+    notifySunrise: false,
+    perPrayer: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true }
+  },
   onboarded: false
 }
 
@@ -32,7 +41,18 @@ function load() {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...DEFAULTS }
     const saved = JSON.parse(raw)
-    return { ...DEFAULTS, ...saved, adjustments: { ...DEFAULTS.adjustments, ...(saved.adjustments || {}) } }
+    // `notifications` used to be a boolean; anything non-object is discarded.
+    const savedNotif = saved.notifications && typeof saved.notifications === 'object' ? saved.notifications : {}
+    return {
+      ...DEFAULTS,
+      ...saved,
+      adjustments: { ...DEFAULTS.adjustments, ...(saved.adjustments || {}) },
+      notifications: {
+        ...DEFAULTS.notifications,
+        ...savedNotif,
+        perPrayer: { ...DEFAULTS.notifications.perPrayer, ...(savedNotif.perPrayer || {}) }
+      }
+    }
   } catch {
     return { ...DEFAULTS }
   }

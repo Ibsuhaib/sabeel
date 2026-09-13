@@ -124,6 +124,26 @@ check('the reciter catalogue covers the Haramain and is honest about Aqsa', () =
   }
 })
 
+check('the adhan is present and its licence is recorded', () => {
+  const a = read('adhan.json')
+  assert(Array.isArray(a.adhans) && a.adhans.length >= 1, 'no adhan recording shipped')
+  for (const r of a.adhans) {
+    for (const k of ['id', 'file', 'muadhdhin', 'licence', 'attribution', 'source', 'bytes']) {
+      assert(r[k], `adhan ${r.id || '?'} is missing "${k}"`)
+    }
+    // A recording with no stated licence must never ship — see DATA_LICENCES.md.
+    assert(/CC|Public domain|CC0/i.test(r.licence), `adhan ${r.id} has an unrecognised licence "${r.licence}"`)
+    assert(/^https:\/\//.test(r.source), `adhan ${r.id} has no checkable source URL`)
+    const f = path.join(DATA, '..', 'adhan', r.file)
+    assert(fs.existsSync(f), `${r.file} is missing from public/adhan`)
+    const buf = fs.readFileSync(f)
+    const isMp3 = buf.slice(0, 3).toString() === 'ID3' || (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0)
+    assert(isMp3, `${r.file} is not an mp3`)
+    assert(buf.length === r.bytes, `${r.file} is ${buf.length} bytes, index says ${r.bytes}`)
+    assert(buf.length > 200000, `${r.file} is too short to be an adhan`)
+  }
+})
+
 check('juz boundaries are monotonic across the whole muṣḥaf', () => {
   let last = 1
   for (let n = 1; n <= 114; n++) {

@@ -20,6 +20,7 @@ const SOURCES = [
   { what: 'Prayer times', who: 'adhan-js by Batoul Apps', note: 'MIT — computed on device, no network' },
   { what: 'Recitation, per ayah', who: 'EveryAyah.com', note: '39 reciters — ayah repeat and range looping work with these' },
   { what: 'Recitation, full surah', who: 'mp3quran.net', note: 'Imams whose muṣḥaf is only published surah by surah' },
+  { what: 'Adhan for notifications', who: 'Aaqib Azeez, via Wikimedia Commons', note: 'CC BY-SA 4.0 — or use your own file, which never leaves your device' },
   { what: 'Arabic fonts', who: 'Amiri Quran, Scheherazade New, Noto Naskh Arabic', note: 'SIL Open Font License' }
 ]
 
@@ -129,6 +130,14 @@ export default function About() {
             <strong className="text-ink">There is no Masjid al-Aqsa reciter.</strong> No complete
             Quran recorded by an imam of al-Aqsa exists in the open recitation archives. Rather than
             label someone else as an Aqsa reciter, that space is left empty.
+          </p>
+          <p className="text-[13px] text-muted leading-relaxed mt-3">
+            <strong className="text-ink">Notifications with the app fully closed</strong> depend on
+            the browser. Where it supports scheduled notifications, prayer times are handed to the
+            operating system and arrive without Sabeel running. Where it does not, they are reliable
+            while Sabeel is open or in the background, and anything missed is shown when you next
+            open it. Guaranteeing more would need a push server — a backend, and your prayer times
+            leaving your phone.
           </p>
         </Card>
       </Section>

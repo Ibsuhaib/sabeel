@@ -116,6 +116,7 @@ export async function findHadith(collection, n) {
 /* -------------------------------- Reciters -------------------------------- */
 
 export const reciterCatalogue = () => load('reciters.json')
+export const adhanCatalogue = () => load('adhan.json')
 
 /* ----------------------------------- Dua ---------------------------------- */
 

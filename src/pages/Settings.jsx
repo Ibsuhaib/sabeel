@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSettings } from '../lib/settings.jsx'
 import { METHODS, HIGH_LAT_RULES, POLAR_RULES, PRAYERS } from '../lib/prayer.js'
 import { loadReciters, findReciter } from '../lib/reciters.js'
@@ -13,6 +14,7 @@ export default function Settings() {
   const [sheet, setSheet] = useState(null)
   const [msg, setMsg] = useState(null)
   const fileRef = useRef(null)
+  const nav = useNavigate()
   const [catalogue, setCatalogue] = useState(null)
 
   useEffect(() => { loadReciters().then(setCatalogue) }, [])
@@ -133,6 +135,22 @@ export default function Settings() {
           Use these only to match a masjid you actually pray at. A calculation is not wrong
           because it disagrees with an app you used before.
         </p>
+      </Section>
+
+      <Section title="Notifications">
+        <Card className="mx-4 divide-y divide-line">
+          <button onClick={() => nav('/notifications')} className="tap w-full flex items-center gap-3 px-4 py-3 text-left">
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm">Prayer notifications</span>
+              <span className="block text-[11px] text-muted mt-0.5 truncate">
+                {settings.notifications?.enabled
+                  ? `On · ${settings.notifications.sound === 'silent' ? 'silent' : settings.notifications.sound === 'beep' ? 'chime' : 'adhan'}`
+                  : 'Off'}
+              </span>
+            </span>
+            <Icon name="forward" size={16} className="text-muted" />
+          </button>
+        </Card>
       </Section>
 
       <Section title="Appearance">

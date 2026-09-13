@@ -25,6 +25,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Our own notificationclick/close handlers, merged into the generated SW.
+        importScripts: ['/sw-notifications.js'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -41,6 +43,18 @@ export default defineConfig({
             urlPattern: /^https:\/\/everyayah\.com\/.*/,
             handler: 'CacheFirst',
             options: { cacheName: 'sabeel-audio', expiration: { maxEntries: 3000 } }
+          },
+          {
+            urlPattern: /^https:\/\/[^/]*mp3quran\.net\/.*/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'sabeel-audio', expiration: { maxEntries: 300 } }
+          },
+          {
+            // The adhan must still sound with no signal, so it is cached the
+            // first time it plays and kept.
+            urlPattern: /\/adhan\/.*\.mp3$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'sabeel-adhan', expiration: { maxEntries: 10 } }
           }
         ]
       }
