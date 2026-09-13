@@ -17,3 +17,20 @@ public/data/hadith/*/
 # The Quran text, dua data and search indexes ARE committed on purpose:
 # the text of the muṣḥaf should be version-controlled and diffable, so that any
 # change to a single letter shows up in review.
+
+# --- Capacitor / Android ---
+# The android/ project itself IS committed so the APK is reproducible, but
+# build output, the copied web bundle and machine-local paths are not.
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins/
+android/local.properties
+*.apk
+*.aab
+*.keystore
+!android/gradle/wrapper/gradle-wrapper.jar

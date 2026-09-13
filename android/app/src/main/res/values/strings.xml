@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sabeel</string>
+    <string name="title_activity_main">Sabeel</string>
+    <string name="package_name">app.sabeel.quran</string>
+    <string name="custom_url_scheme">app.sabeel.quran</string>
+</resources>

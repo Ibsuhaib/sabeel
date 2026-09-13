@@ -70,7 +70,7 @@ export default function HadithCard({ hadith, collection, book, bookmarked, onBoo
   }
 
   return (
-    <article className="px-4 py-5 border-b border-line">
+    <article data-hadith={hadith.n} className="px-4 py-5 border-b border-line">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[11px] tabular-nums px-2 py-0.5 rounded-md bg-surf border border-line text-muted">
           {hadith.n}

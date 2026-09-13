@@ -5,10 +5,11 @@ import { useData } from '../lib/useData.js'
 import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
 import { player } from '../lib/audio.js'
-import { usePlayer, loadReciters } from '../lib/reciters.js'
+import { usePlayer, loadReciters, findReciter } from '../lib/reciters.js'
 import { toArabicNumber } from '../lib/format.js'
 import { Loading, LoadError, Sheet, Toggle, Choice, IconButton, Button } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
+import DownloadAudio from '../components/DownloadAudio.jsx'
 import Icon from '../components/Icon.jsx'
 
 const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
@@ -110,6 +111,10 @@ export default function SurahReader() {
           <IconButton
             name="book" label="Muṣḥaf page view"
             onClick={() => { set({ readerMode: 'mushaf' }); nav(`/mushaf/${currentPage}`) }}
+          />
+          <DownloadAudio
+            reciter={catalogue ? findReciter(catalogue, settings.reciter) : null}
+            surah={num} ayahCount={ayahs.length} surahName={info.en}
           />
           <IconButton
             name="play"

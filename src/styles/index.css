@@ -75,6 +75,21 @@ body {
 .dyslexic .translation { font-family: 'Comic Sans MS', 'Trebuchet MS', Verdana, sans-serif; letter-spacing: .02em; }
 .translation { font-size: var(--tr-size); line-height: 1.7; }
 
+/* ---- Long-surah performance ----------------------------------------------
+   Al-Baqarah renders 286 ayahs into a single ~100,000px page. Without this,
+   every reflow — changing the Arabic size, rotating the phone, switching theme
+   — lays out all of it, which measured at ~112ms on a desktop and is far worse
+   on the cheap Android this app is meant to run on.
+
+   content-visibility lets the browser skip layout and paint for ayahs that are
+   off screen entirely. `contain-intrinsic-size: auto <n>` makes it remember each
+   ayah's real height once measured, so the scrollbar does not jump around.     */
+[data-ayah],
+[data-hadith] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

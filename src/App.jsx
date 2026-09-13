@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import TabBar from './components/TabBar.jsx'
 import Player from './components/Player.jsx'
 import { useReciterSync } from './lib/reciters.js'
 import { usePrayerNotifications } from './lib/usePrayerNotifications.js'
+import { applyNativeChrome } from './lib/native.js'
 import { Loading } from './components/ui.jsx'
 import { useSettings } from './lib/settings.jsx'
 
@@ -19,6 +20,7 @@ import Onboarding from './pages/Onboarding.jsx'
 const Mushaf = lazy(() => import('./pages/Mushaf.jsx'))
 const HadithLookup = lazy(() => import('./pages/HadithLookup.jsx'))
 const Notifications = lazy(() => import('./pages/Notifications.jsx'))
+const OfflineAudio = lazy(() => import('./pages/OfflineAudio.jsx'))
 const HadithCollection = lazy(() => import('./pages/HadithCollection.jsx'))
 const HadithBook = lazy(() => import('./pages/HadithBook.jsx'))
 const DuaCategory = lazy(() => import('./pages/DuaCategory.jsx'))
@@ -42,6 +44,9 @@ export default function App() {
   // Arms prayer notifications for the session and plays the chosen sound when
   // one fires while the app is alive.
   usePrayerNotifications(settings)
+  // Match the Android status bar to the theme and dismiss the splash once React
+  // has actually painted something.
+  useEffect(() => { applyNativeChrome(settings.theme) }, [settings.theme])
   if (!settings.onboarded) return <Onboarding />
 
   return (
@@ -74,6 +79,7 @@ export default function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/offline-audio" element={<OfflineAudio />} />
           <Route path="/zakat" element={<Zakat />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/bookmarks" element={<Bookmarks />} />

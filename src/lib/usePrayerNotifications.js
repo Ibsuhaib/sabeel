@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { schedule, catchUp, clearTimers, permission } from './notifications.js'
+import { useEffect, useRef, useState } from 'react'
+import { schedule, catchUp, clearTimers, cancelAll, effectivePermission } from './notifications.js'
 import { playFor, stopSound } from './sounds.js'
 import { adhanCatalogue } from './data.js'
 
@@ -7,7 +7,9 @@ import { adhanCatalogue } from './data.js'
 // only while the Prayer screen happens to be open.
 export function usePrayerNotifications(settings) {
   const adhanFile = useRef(null)
-  const enabled = !!settings.notifications?.enabled && permission() === 'granted' && !!settings.location
+  const [granted, setGranted] = useState(false)
+  useEffect(() => { effectivePermission().then(p => setGranted(p === 'granted')) }, [settings.notifications?.enabled])
+  const enabled = !!settings.notifications?.enabled && granted && !!settings.location
 
   useEffect(() => {
     if (!enabled) return
@@ -15,7 +17,7 @@ export function usePrayerNotifications(settings) {
   }, [enabled])
 
   useEffect(() => {
-    if (!enabled) { clearTimers(); return }
+    if (!enabled) { cancelAll(); return }
 
     const onFire = () => { playFor(settings, { adhanFile: adhanFile.current }) }
 

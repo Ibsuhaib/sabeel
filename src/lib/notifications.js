@@ -18,6 +18,7 @@
 // and sending someone's prayer times off their phone.
 import { timesFor, PRAYERS, FARD } from './prayer.js'
 import { dateKey, fmtTime } from './format.js'
+import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission } from './native.js'
 
 const FIRED_KEY = 'sabeel.notified.v1'
 const HORIZON_HOURS = 24
@@ -33,9 +34,17 @@ export const hasTriggers = () =>
   typeof window !== 'undefined' && 'Notification' in window && 'showTrigger' in Notification.prototype
 
 export async function requestPermission() {
+  // Inside the APK the OS permission is the one that matters.
+  if (await isNative()) return requestNativePermission()
   if (!supported()) return 'unsupported'
   if (Notification.permission === 'granted') return 'granted'
   try { return await Notification.requestPermission() } catch { return 'denied' }
+}
+
+// Async because the native check is; `permission()` stays sync for render paths.
+export async function effectivePermission() {
+  if (await isNative()) return nativePermission()
+  return permission()
 }
 
 async function registration() {
@@ -169,14 +178,33 @@ export function clearTimers() {
   timers = []
 }
 
+// Turning notifications off has to drop the native alarms too, or Android keeps
+// firing them after the toggle says Off. Deliberately separate from clearTimers,
+// which runs on every re-arm — cancelling there would race the new schedule.
+export async function cancelAll() {
+  clearTimers()
+  await cancelNative().catch(() => {})
+}
+
 // Re-arm everything. Safe to call as often as you like — it clears first.
 export async function schedule(settings, { onFire } = {}) {
   clearTimers()
   const n = settings.notifications || {}
-  if (!n.enabled || permission() !== 'granted' || !settings.location) return { armed: 0, mode: 'off' }
+  // Must be the *effective* permission: inside the APK the web Notification API
+  // reports 'default' while the real grant lives with the OS.
+  const perm = await effectivePermission()
+  if (!n.enabled || perm !== 'granted' || !settings.location) return { armed: 0, mode: 'off' }
 
   const items = upcoming(settings)
   installedFor = `${settings.location.lat},${settings.location.lng},${settings.method},${settings.madhab}`
+
+  // On Android the alarm manager does this properly: it fires in Doze, plays the
+  // adhan as the notification sound and stays in the shade until tapped. Nothing
+  // in the browser matches that, so when it is available it is what we use.
+  if (await isNative()) {
+    const r = await scheduleNative(items, settings)
+    return { armed: items.length, inPage: 0, osArmed: r.scheduled, mode: 'native' }
+  }
 
   let osArmed = 0
   if (hasTriggers()) osArmed = await scheduleWithTriggers(items, settings)
@@ -207,7 +235,11 @@ export async function schedule(settings, { onFire } = {}) {
 // never shown — but only recently, so you are not told about Fajr at 9pm.
 export async function catchUp(settings, { windowMinutes = 30, onFire } = {}) {
   const n = settings.notifications || {}
-  if (!n.enabled || permission() !== 'granted' || !settings.location) return null
+  // Native notifications are delivered by Android itself, so there is nothing
+  // for the app to catch up on when it opens.
+  if (await isNative()) return null
+  const perm = await effectivePermission()
+  if (!n.enabled || perm !== 'granted' || !settings.location) return null
 
   const now = new Date()
   const t = timesFor(settings, now)
@@ -252,6 +284,16 @@ export async function sendTest(settings) {
   } catch (e) {
     return { ok: false, reason: e.message }
   }
+}
+
+export async function describeReliabilityAsync() {
+  if (await isNative()) {
+    return {
+      level: 'best',
+      text: 'Running as an installed Android app. Prayer times are scheduled with Android’s own alarm manager, so they fire on time even in Doze, sound the adhan, and stay in the notification shade until you deal with them.'
+    }
+  }
+  return describeReliability()
 }
 
 export function describeReliability() {

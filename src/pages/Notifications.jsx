@@ -6,7 +6,7 @@ import { useData } from '../lib/useData.js'
 import { adhanCatalogue } from '../lib/data.js'
 import {
   supported, permission, requestPermission, hasTriggers,
-  schedule, sendTest, upcoming, describeReliability
+  schedule, sendTest, upcoming, describeReliability, describeReliabilityAsync
 } from '../lib/notifications.js'
 import { prime, playBeep, playAdhan, stopSound, vibrate, setCustomAdhan, customAdhan } from '../lib/sounds.js'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Empty } from '../components/ui.jsx'
@@ -82,7 +82,8 @@ export default function Notifications() {
     setMsg({ tone: 'ok', text: `Using “${rec.name}”. It stays on this device — nothing is uploaded.` })
   }
 
-  const reliability = describeReliability()
+  const [reliability, setReliability] = useState(describeReliability())
+  useEffect(() => { describeReliabilityAsync().then(setReliability) }, [])
   const next = settings.location ? upcoming(settings).slice(0, 4) : []
 
   if (!supported()) {
@@ -260,11 +261,11 @@ export default function Notifications() {
                     <Icon name="flag" size={16} />Send a test notification
                   </Button>
                 </div>
-                <Card className={`mx-4 mt-3 p-4 ${reliability.level === 'good' ? 'border-brand/30' : 'border-amber-500/30'}`}>
+                <Card className={`mx-4 mt-3 p-4 ${reliability.level === 'good' || reliability.level === 'best' ? 'border-brand/30' : 'border-amber-500/30'}`}>
                   <div className="flex items-start gap-2">
                     <Icon
-                      name={reliability.level === 'good' ? 'check' : 'warn'} size={15}
-                      className={`shrink-0 mt-0.5 ${reliability.level === 'good' ? 'text-brand' : 'text-amber-500'}`}
+                      name={reliability.level === 'good' || reliability.level === 'best' ? 'check' : 'warn'} size={15}
+                      className={`shrink-0 mt-0.5 ${reliability.level === 'good' || reliability.level === 'best' ? 'text-brand' : 'text-amber-500'}`}
                     />
                     <div className="flex-1">
                       <p className="text-xs text-muted leading-relaxed">{reliability.text}</p>
