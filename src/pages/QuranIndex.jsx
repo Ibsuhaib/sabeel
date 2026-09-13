@@ -66,6 +66,16 @@ export default function QuranIndex() {
 
       {!q && (
         <div className="px-4 mt-3">
+          <Card as={Link} to="/khatm" className="px-4 py-3 flex items-center gap-3 tap block mb-2">
+            <span className="w-9 h-9 rounded-xl bg-brand/10 text-brand grid place-items-center shrink-0">
+              <Icon name="calendar" size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Khatm plan</span>
+              <span className="block text-[11px] text-muted mt-0.5">Finish the Quran by a date you choose</span>
+            </span>
+            <Icon name="forward" size={16} className="text-muted" />
+          </Card>
           <Card as={Link} to={`/mushaf/${last?.page || 1}`} className="px-4 py-3 flex items-center gap-3 tap block">
             <span className="w-9 h-9 rounded-xl bg-gold/10 text-gold grid place-items-center shrink-0">
               <Icon name="book" size={18} />

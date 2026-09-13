@@ -6,6 +6,7 @@ import { hijri, upcomingEvents, isRamadan } from '../lib/hijri.js'
 import { fmtTime, fmtCountdown } from '../lib/format.js'
 import { store } from '../lib/store.js'
 import { surahInfo } from '../lib/data.js'
+import { progress as khatmProgress } from '../lib/khatm.js'
 import { Screen, Card, Section, IconButton, Button } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -15,11 +16,14 @@ export default function Home() {
   const { settings } = useSettings()
   const [now, setNow] = useState(new Date())
   const [last, setLast] = useState(null)
+  const [khatm, setKhatm] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => { store.khatm().then(p => setKhatm(p || null)) }, [])
 
   useEffect(() => {
     store.lastRead().then(async lr => {
@@ -114,6 +118,36 @@ export default function Home() {
         )}
       </div>
 
+      {khatm && (() => {
+        const kp = khatmProgress(khatm)
+        if (kp.finished) return null
+        return (
+          <div className="px-4 mt-3">
+            <Card as={Link} to="/khatm" className="p-4 flex items-center gap-3 tap block">
+              <span className="w-10 h-10 rounded-xl bg-brand/10 text-brand grid place-items-center shrink-0 relative">
+                <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90 w-10 h-10">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgb(var(--c-line))" strokeWidth="2.5" />
+                  <circle
+                    cx="18" cy="18" r="15" fill="none" strokeWidth="2.5" strokeLinecap="round"
+                    stroke={kp.status === 'behind' ? 'rgb(var(--c-gold))' : 'rgb(var(--c-brand))'}
+                    strokeDasharray={2 * Math.PI * 15}
+                    strokeDashoffset={2 * Math.PI * 15 * (1 - kp.percent / 100)}
+                  />
+                </svg>
+                <span className="relative text-[10px] font-semibold tabular-nums">{Math.round(kp.percent)}</span>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-muted">{khatm.label} · {kp.daysLeft} day{kp.daysLeft === 1 ? '' : 's'} left</span>
+                <span className="block font-medium truncate tabular-nums">
+                  {kp.today.pages > 0 ? `Today: ${kp.today.pages} pages (${kp.today.from}–${kp.today.to})` : 'Today is done'}
+                </span>
+              </span>
+              <Icon name="forward" size={18} className="text-muted shrink-0" />
+            </Card>
+          </div>
+        )
+      })()}
+
       {ramadan && (
         <div className="px-4 mt-3">
           <Card className="p-4 border-gold/40">
@@ -139,7 +173,7 @@ export default function Home() {
           <Tile to="/dua/tasbih" icon="counter" label="Tasbih" />
           <Tile to="/qibla" icon="compass" label="Qibla" />
           <Tile to="/dua/morning-dhikr" icon="sunrise" label="Adhkar" />
-          <Tile to="/tracker" icon="chart" label="Tracker" />
+          <Tile to="/khatm" icon="book" label="Khatm" />
         </div>
       </Section>
 

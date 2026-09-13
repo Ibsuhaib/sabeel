@@ -48,6 +48,36 @@ export function isRamadan(date = new Date(), offsetDays = 0) {
   return hijri(date, offsetDays).month === 9
 }
 
+// The Gregorian dates a given Hijri month starts and ends on. Walks day by day
+// rather than doing calendar arithmetic, because the Umm al-Qura month lengths
+// are not something to re-derive by hand.
+export function hijriMonthRange(month, { offsetDays = 0, from = new Date() } = {}) {
+  const start = new Date(from)
+  start.setHours(0, 0, 0, 0)
+
+  let first = null
+  // 400 days covers the next occurrence of any month from any starting point.
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(start.getTime() + i * 86400000)
+    const h = hijri(d, offsetDays)
+    if (h.month === month) {
+      // Rewind to day 1 if we are already inside the month.
+      first = new Date(d.getTime() - (h.day - 1) * 86400000)
+      break
+    }
+  }
+  if (!first) return null
+
+  let last = first
+  for (let i = 1; i < 32; i++) {
+    const d = new Date(first.getTime() + i * 86400000)
+    if (hijri(d, offsetDays).month !== month) break
+    last = d
+  }
+  const days = Math.round((last - first) / 86400000) + 1
+  return { first, last, days, year: hijri(first, offsetDays).year }
+}
+
 // Walk forward day by day to find the Gregorian date of each Hijri event.
 // 400 days covers a full Hijri year with room to spare.
 export function upcomingEvents(offsetDays = 0, limit = 6) {

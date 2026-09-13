@@ -21,6 +21,7 @@ const Mushaf = lazy(() => import('./pages/Mushaf.jsx'))
 const HadithLookup = lazy(() => import('./pages/HadithLookup.jsx'))
 const Notifications = lazy(() => import('./pages/Notifications.jsx'))
 const OfflineAudio = lazy(() => import('./pages/OfflineAudio.jsx'))
+const Khatm = lazy(() => import('./pages/Khatm.jsx'))
 const HadithCollection = lazy(() => import('./pages/HadithCollection.jsx'))
 const HadithBook = lazy(() => import('./pages/HadithBook.jsx'))
 const DuaCategory = lazy(() => import('./pages/DuaCategory.jsx'))
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/offline-audio" element={<OfflineAudio />} />
+          <Route path="/khatm" element={<Khatm />} />
           <Route path="/zakat" element={<Zakat />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/bookmarks" element={<Bookmarks />} />

@@ -13,6 +13,7 @@ export default function More() {
       <Section title="Worship">
         <Card className="mx-4 divide-y divide-line overflow-hidden">
           <Row icon="compass" title="Qibla" subtitle="Direction of the Kaaba from where you are" to="/qibla" />
+          <Row icon="book" title="Khatm plan" subtitle="Finish the Quran by a date you choose" to="/khatm" />
           <Row icon="chart" title="Prayer tracker" subtitle="Monthly heatmap, streaks and qada count" to="/tracker" />
           <Row icon="prayer" title="Prayer notifications" subtitle="Adhan, chime or silent — you choose" to="/notifications" />
           <Row icon="calendar" title="Monthly timetable" subtitle="Printable prayer times for the month" to="/prayer/timetable" />
