@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Theme tokens. Light is the base; the others override only colours. ---- */
+:root {
+  --c-bg:    250 249 246;
+  --c-surf:  255 255 255;
+  --c-ink:   26  32  28;
+  --c-muted: 106 116 110;
+  --c-line:  226 226 220;
+  --c-brand:  22 101  68;
+  --c-gold:  160 122  38;
+  --font-arabic: 'Amiri Quran';
+  --ar-size: 30px;
+  --ar-leading: 2.1;
+  --tr-size: 15px;
+}
+
+.theme-dark {
+  --c-bg:    15  23  17;
+  --c-surf:  23  33  26;
+  --c-ink:   232 237 232;
+  --c-muted: 146 158 148;
+  --c-line:  42  56  46;
+  --c-brand: 106 190 143;
+  --c-gold:  211 173  94;
+}
+
+.theme-sepia {
+  --c-bg:    244 236 221;
+  --c-surf:  251 245 234;
+  --c-ink:    60  48  32;
+  --c-muted: 124 106  82;
+  --c-line:  223 210 187;
+  --c-brand:  22  92  62;
+  --c-gold:  145 104  28;
+}
+
+.theme-black {
+  --c-bg:      0   0   0;
+  --c-surf:   12  14  12;
+  --c-ink:   233 237 233;
+  --c-muted: 138 148 140;
+  --c-line:   32  38  33;
+  --c-brand: 110 200 150;
+  --c-gold:  214 178 100;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-ink));
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* ---- Arabic typography. Part 6: get this right before anything else. ---- */
+.ar {
+  font-family: var(--font-arabic), 'Scheherazade New', 'Noto Naskh Arabic', serif;
+  direction: rtl;
+  text-align: right;
+  font-size: var(--ar-size);
+  line-height: var(--ar-leading);
+  /* Arabic diacritics sit above and below the baseline; never clip them. */
+  padding-block: 0.15em;
+  word-spacing: 0.06em;
+  font-feature-settings: 'calt' 1, 'liga' 1, 'kern' 1;
+}
+.ar-sm { font-size: calc(var(--ar-size) * 0.72); line-height: 1.95; }
+
+.dyslexic .translation { font-family: 'Comic Sans MS', 'Trebuchet MS', Verdana, sans-serif; letter-spacing: .02em; }
+.translation { font-size: var(--tr-size); line-height: 1.7; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.safe-b { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-t { padding-top: env(safe-area-inset-top, 0px); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+.tap { -webkit-tap-highlight-color: transparent; }
+
+/* The ayah number medallion */
+.ayah-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.75em; height: 1.75em; padding: 0 .3em;
+  border-radius: 999px; font-size: .42em; font-family: ui-sans-serif, system-ui, sans-serif;
+  border: 1px solid rgb(var(--c-gold) / .5); color: rgb(var(--c-gold));
+  vertical-align: middle; margin-inline: .25em; font-variant-numeric: tabular-nums;
+}

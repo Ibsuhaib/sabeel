@@ -1,0 +1,19 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Hadith bulk data is ~73 MB of generated JSON. It is regenerated verbatim by
+# `npm run data:hadith` and rebuilt in CI on every deploy, so it does not belong
+# in git history. The index, which the app needs to render the collection list,
+# IS committed.
+public/data/hadith/*/
+!public/data/hadith/index.json
+
+# The Quran text, dua data and search indexes ARE committed on purpose:
+# the text of the muṣḥaf should be version-controlled and diffable, so that any
+# change to a single letter shows up in review.
