@@ -1,23 +1,24 @@
-// Build-time: compact lowercase text indexes so unified search runs entirely
-// on-device. Quran + dua load on first search; hadith indexes load per
-// collection so we never ship a 25 MB inverted index nobody asked for.
+// Build-time: compact text indexes so unified search runs entirely on-device.
+// Quran + dua load on first search; hadith indexes load per collection so we
+// never ship a 25 MB inverted index nobody asked for.
+//
+// The indexes store the text AS WRITTEN, not a normalised form. Search results
+// are shown to the reader, and "and seek help through patience and prayer"
+// stripped of its capital and its full stop reads like a transcript of scripture
+// rather than scripture. The client normalises once per corpus on first search
+// and keeps that in memory \u2014 see src/lib/search.js.
 import fs from 'node:fs'
 import path from 'node:path'
 import { DATA, writeJSON, log, mb, kb } from './_util.mjs'
 
-const norm = s => (s || '')
-  .toLowerCase()
-  .replace(/[\u2018\u2019']/g, '')
-  .replace(/[^a-z0-9\s]/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim()
+const clean = s => (s || '').replace(/\s+/g, ' ').trim()
 
 function quranIndex() {
   const meta = JSON.parse(fs.readFileSync(path.join(DATA, 'quran', 'meta.json'), 'utf8'))
   const rows = []
   for (const s of meta.surahs) {
     const { ayahs } = JSON.parse(fs.readFileSync(path.join(DATA, 'quran', 'surah', `${s.n}.json`), 'utf8'))
-    for (const a of ayahs) rows.push({ k: `${s.n}:${a.v}`, t: norm(a.en) })
+    for (const a of ayahs) rows.push({ k: `${s.n}:${a.v}`, t: clean(a.en) })
   }
   const size = writeJSON(path.join(DATA, 'search', 'quran.json'), { rows })
   log(`  quran   ${rows.length} ayahs \u00b7 ${mb(size)}`)
@@ -29,7 +30,7 @@ function duaIndex() {
   for (const c of idx.categories) {
     const cat = JSON.parse(fs.readFileSync(path.join(DATA, 'dua', `${c.slug}.json`), 'utf8'))
     for (const it of cat.items) {
-      rows.push({ k: `${c.slug}/${it.id}`, title: it.title, t: norm(`${it.title} ${it.en} ${it.benefits || ''}`) })
+      rows.push({ k: `${c.slug}/${it.id}`, title: it.title, t: clean(`${it.en} ${it.benefits || ''}`) })
     }
   }
   const size = writeJSON(path.join(DATA, 'search', 'dua.json'), { rows })
@@ -47,7 +48,7 @@ function hadithIndexes() {
       const f = path.join(DATA, 'hadith', c.id, `${b.n}.json`)
       if (!fs.existsSync(f)) continue
       const { hadiths } = JSON.parse(fs.readFileSync(f, 'utf8'))
-      for (const h of hadiths) rows.push({ n: h.n, b: b.n, t: norm(h.en) })
+      for (const h of hadiths) rows.push({ n: h.n, b: b.n, t: clean(h.en) })
     }
     total += writeJSON(path.join(DATA, 'hadith', c.id, '_search.json'), { rows })
   }

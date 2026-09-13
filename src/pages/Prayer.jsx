@@ -204,6 +204,18 @@ function WhySheet({ open, onClose, settings }) {
           </p>
         </Block>
 
+        {e.insidePolarCircle && (
+          <Block title="Polar circle">
+            <Line k="Rule" v={e.polarRule} />
+            <Line k="Effect" v={e.polarNote} />
+            <p className="text-[11px] text-amber-500 mt-2 leading-relaxed">
+              You are inside the polar circle, where the sun can stay up or down for weeks and
+              the usual signs disappear entirely. These times are a scholarly accommodation, not
+              an observation. Follow your local masjid or scholar over this app.
+            </p>
+          </Block>
+        )}
+
         {e.adjustments.length > 0 && (
           <Block title="Your manual offsets">
             {e.adjustments.map(([k, v]) => <Line key={k} k={k} v={`${v > 0 ? '+' : ''}${v} min`} />)}

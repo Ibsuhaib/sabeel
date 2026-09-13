@@ -1,7 +1,9 @@
 export const pad = n => String(n).padStart(2, '0')
 
 export function fmtTime(d, use24 = false) {
-  if (!d) return '--:--'
+  // Inside the polar circles adhan can hand back an Invalid Date; never let one
+  // reach the screen as "NaN:NaN".
+  if (!d || Number.isNaN(d.getTime?.() ?? NaN)) return '--:--'
   return d.toLocaleTimeString([], { hour: use24 ? '2-digit' : 'numeric', minute: '2-digit', hour12: !use24 })
 }
 

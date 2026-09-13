@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useSettings } from '../lib/settings.jsx'
-import { METHODS, HIGH_LAT_RULES, PRAYERS } from '../lib/prayer.js'
+import { METHODS, HIGH_LAT_RULES, POLAR_RULES, PRAYERS } from '../lib/prayer.js'
 import { RECITERS } from '../lib/audio.js'
 import { store } from '../lib/store.js'
 import { hijri } from '../lib/hijri.js'
@@ -92,6 +92,15 @@ export default function Settings() {
               <span className="block text-sm">High latitude rule</span>
               <span className="block text-[11px] text-muted mt-0.5 truncate">
                 {HIGH_LAT_RULES.find(r => r.id === settings.highLatitudeRule)?.label}
+              </span>
+            </span>
+            <Icon name="forward" size={16} className="text-muted" />
+          </button>
+          <button onClick={() => setSheet('polar')} className="tap w-full flex items-center gap-3 px-4 py-3 text-left">
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm">Inside the polar circle</span>
+              <span className="block text-[11px] text-muted mt-0.5 truncate">
+                {POLAR_RULES.find(r => r.id === settings.polarCircleResolution)?.label}
               </span>
             </span>
             <Icon name="forward" size={16} className="text-muted" />
@@ -204,6 +213,11 @@ export default function Settings() {
       <SheetPicker
         open={sheet === 'highlat'} onClose={() => setSheet(null)} title="High latitude rule"
         options={HIGH_LAT_RULES} value={settings.highLatitudeRule} onChange={v => { set({ highLatitudeRule: v }); setSheet(null) }}
+      />
+      <SheetPicker
+        open={sheet === 'polar'} onClose={() => setSheet(null)} title="Inside the polar circle"
+        options={POLAR_RULES} value={settings.polarCircleResolution}
+        onChange={v => { set({ polarCircleResolution: v }); setSheet(null) }}
       />
       <SheetPicker
         open={sheet === 'reciter'} onClose={() => setSheet(null)} title="Reciter"

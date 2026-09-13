@@ -80,11 +80,13 @@ async function main() {
   total += writeJSON(path.join(DATA, 'quran', 'meta.json'), {
     surahs: index,
     juzStart: JUZ_START,
+    // Keys here must match the per-ayah field names (ar/en/e2/tr) so the reader
+    // can look up a label by the same key it renders text from.
     editions: {
-      ar:  { slug: EDITIONS.ar,  label: 'Uthmani (Hafs)' },
-      en:  { slug: EDITIONS.en,  label: 'Saheeh International' },
-      en2: { slug: EDITIONS.en2, label: 'The Clear Quran — Mustafa Khattab' },
-      tr:  { slug: EDITIONS.tr,  label: 'Transliteration' }
+      ar: { slug: EDITIONS.ar,  label: 'Uthmani (Hafs)' },
+      en: { slug: EDITIONS.en,  label: 'Saheeh International' },
+      e2: { slug: EDITIONS.en2, label: 'The Clear Quran — Mustafa Khattab' },
+      tr: { slug: EDITIONS.tr,  label: 'Transliteration' }
     },
     builtAt: new Date().toISOString().slice(0, 10)
   })

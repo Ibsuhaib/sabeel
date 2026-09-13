@@ -45,7 +45,9 @@ async function main() {
       if (!byBook.has(book)) byBook.set(book, [])
       byBook.get(book).push({
         n: h.hadithnumber,
-        an: h.arabicnumber,
+        // Some entries carry no separate Arabic numbering; fall back rather than
+        // emitting an undefined field the UI would have to guard against.
+        an: h.arabicnumber ?? h.hadithnumber,
         ar: arabic.get(h.hadithnumber) || '',
         en: h.text || '',
         g: (h.grades || []).map(g => ({ by: g.name, grade: g.grade })),
@@ -56,10 +58,12 @@ async function main() {
     const sections = en.metadata?.sections || {}
     const books = []
     for (const [num, list] of [...byBook.entries()].sort((a, b) => a[0] - b[0])) {
-      const title = (sections[num] || '').trim()
+      // Section 0 is the compiler's introduction (the Muqaddimah in Muslim),
+      // which upstream leaves untitled.
+      const title = (sections[num] || '').trim() || (num === 0 ? 'Introduction' : `Book ${num}`)
       if (!list.length) continue
       total += writeJSON(path.join(DATA, 'hadith', c.id, `${num}.json`), { book: num, title, hadiths: list })
-      books.push({ n: num, title: title || `Book ${num}`, count: list.length })
+      books.push({ n: num, title, count: list.length })
     }
 
     const graded = en.hadiths.filter(h => h.grades?.length).length

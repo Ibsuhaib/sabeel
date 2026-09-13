@@ -25,6 +25,15 @@ export const HIGH_LAT_RULES = [
   { id: 'TwilightAngle', label: 'Twilight angle', note: 'Proportional to the calculation method angle' }
 ]
 
+// Inside the polar circles the sun may not set at all for weeks, and the high
+// latitude rules above are not enough — without one of these the library returns
+// an invalid date and the app would show "--:--" through a Norwegian summer.
+export const POLAR_RULES = [
+  { id: 'AqrabYaum', label: 'Aqrab al-Ayyam — nearest day', note: 'Use the times of the closest date on which the signs are distinguishable' },
+  { id: 'AqrabBalad', label: 'Aqrab al-Bilad — nearest land', note: 'Use the times of the nearest latitude that has a real night' },
+  { id: 'Unresolved', label: 'Leave unresolved', note: 'Show nothing rather than an estimate' }
+]
+
 export const PRAYERS = [
   { id: 'fajr', label: 'Fajr', isPrayer: true },
   { id: 'sunrise', label: 'Sunrise', isPrayer: false },
@@ -41,6 +50,7 @@ export function buildParams(settings) {
   const params = factory()
   params.madhab = settings.madhab === 'hanafi' ? adhan.Madhab.Hanafi : adhan.Madhab.Shafi
   params.highLatitudeRule = adhan.HighLatitudeRule[settings.highLatitudeRule] || adhan.HighLatitudeRule.MiddleOfTheNight
+  params.polarCircleResolution = adhan.PolarCircleResolution[settings.polarCircleResolution] || adhan.PolarCircleResolution.AqrabYaum
   params.adjustments = { ...params.adjustments, ...settings.adjustments }
   return params
 }
@@ -103,7 +113,9 @@ export function explain(settings) {
   const p = t._params
   const m = METHODS.find(x => x.id === settings.method)
   const hl = HIGH_LAT_RULES.find(x => x.id === settings.highLatitudeRule)
+  const polar = POLAR_RULES.find(x => x.id === (settings.polarCircleResolution || 'AqrabYaum'))
   const hanafi = settings.madhab === 'hanafi'
+  const insidePolarCircle = Math.abs(settings.location.lat) >= 66.5
   return {
     method: m?.label || settings.method,
     methodNote: m?.note || '',
@@ -116,6 +128,9 @@ export function explain(settings) {
       : 'Asr begins when a shadow is 1× the object length, plus the noon shadow',
     highLatitude: hl?.label || settings.highLatitudeRule,
     highLatitudeNote: hl?.note || '',
+    insidePolarCircle,
+    polarRule: polar?.label || '',
+    polarNote: polar?.note || '',
     coords: settings.location ? `${settings.location.lat.toFixed(4)}, ${settings.location.lng.toFixed(4)}` : '—',
     place: settings.location?.label || 'Unknown location',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

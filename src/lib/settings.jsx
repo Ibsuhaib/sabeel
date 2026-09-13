@@ -16,6 +16,7 @@ export const DEFAULTS = {
   method: 'MuslimWorldLeague',
   madhab: 'shafi',               // shafi | hanafi  (affects Asr only)
   highLatitudeRule: 'MiddleOfTheNight',
+  polarCircleResolution: 'AqrabYaum',   // inside the polar circles, see prayer.js
   adjustments: { fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 },
   location: null,                // { lat, lng, label }
   hijriOffset: 0,
