@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { duaIndex } from '../lib/data.js'
-import { Screen, Header, Loading, Card, Section, IconButton } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, Card, Section, IconButton } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
 
 export default function DuaIndex() {
-  const [idx, setIdx] = useState(null)
-  useEffect(() => { duaIndex().then(setIdx) }, [])
+  const { data: idx, error, retry } = useData(duaIndex, [], { label: 'the dua list' })
+  if (error) return <LoadError message={error} onRetry={retry} back={false} />
   if (!idx) return <Loading />
 
   const total = idx.categories.reduce((a, c) => a + c.count, 0)

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { asmaUlHusna } from '../lib/data.js'
-import { Screen, Header, Loading, Card } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, Card } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 
 export default function Names() {
-  const [data, setData] = useState(null)
+  const { data, error, retry } = useData(asmaUlHusna, [], { label: 'the 99 Names' })
   const [q, setQ] = useState('')
-
-  useEffect(() => { asmaUlHusna().then(setData) }, [])
 
   const list = useMemo(() => {
     if (!data) return []
@@ -19,6 +18,7 @@ export default function Names() {
     )
   }, [data, q])
 
+  if (error) return <LoadError message={error} onRetry={retry} />
   if (!data) return <Loading />
 
   return (

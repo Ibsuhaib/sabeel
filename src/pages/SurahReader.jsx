@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { surah as loadSurah, quranMeta } from '../lib/data.js'
+import { useData } from '../lib/useData.js'
 import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
 import { player } from '../lib/audio.js'
 import { usePlayer, loadReciters } from '../lib/reciters.js'
 import { toArabicNumber } from '../lib/format.js'
-import { Loading, Sheet, Toggle, Choice, IconButton, Button } from '../components/ui.jsx'
+import { Loading, LoadError, Sheet, Toggle, Choice, IconButton, Button } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -19,32 +20,34 @@ export default function SurahReader() {
   const nav = useNavigate()
   const { settings, set } = useSettings()
 
-  const [data, setData] = useState(null)
-  const [meta, setMeta] = useState(null)
+  const { data, error, retry } = useData(
+    () => Promise.all([loadSurah(num), quranMeta()]).then(([s, meta]) => ({ s, meta })),
+    [num],
+    { label: 'this surah' }
+  )
+
   const [bookmarks, setBookmarks] = useState([])
   const [notes, setNotes] = useState({})
   const [sheet, setSheet] = useState(null)
   const [selected, setSelected] = useState(null)
-
   const [catalogue, setCatalogue] = useState(null)
+
+  // The ayah currently at the top of the screen. Recitation starts from here,
+  // not from the beginning of the surah — if you are reading ayah 40, pressing
+  // play should not drag you back to ayah 1.
+  const [readingAt, setReadingAt] = useState(1)
+
   const audio = usePlayer()
-  useEffect(() => { loadReciters().then(setCatalogue) }, [])
   const containerRef = useRef(null)
   const jumped = useRef(false)
 
-  useEffect(() => { quranMeta().then(setMeta) }, [])
-  useEffect(() => {
-    setData(null)
-    jumped.current = false
-    loadSurah(num).then(setData)
-  }, [num])
+  useEffect(() => { loadReciters().then(setCatalogue) }, [])
   useEffect(() => { store.bookmarksQuran().then(setBookmarks); store.notes().then(setNotes) }, [])
+  useEffect(() => { jumped.current = false; setReadingAt(Number(params.get('ayah')) || 1) }, [num])
 
-  // Let the player know how long this surah is so it stops at the end rather
-  // than requesting an ayah that does not exist.
-  useEffect(() => { if (data) player.setSurahLength(data.ayahs.length) }, [data])
+  useEffect(() => { if (data) player.setSurahLength(data.s.ayahs.length) }, [data])
 
-  const info = useMemo(() => meta?.surahs.find(s => s.n === num), [meta, num])
+  const info = useMemo(() => data?.meta.surahs.find(s => s.n === num), [data, num])
   const bookmarked = useMemo(() => new Set(bookmarks.map(b => b.id)), [bookmarks])
 
   useEffect(() => {
@@ -56,12 +59,12 @@ export default function SurahReader() {
     })
   }, [data, params])
 
-  // Follow the recitation, but only for this surah.
   useEffect(() => {
     if (!audio.playing || !audio.ayah || audio.surah !== num) return
     document.getElementById(`ayah-${audio.ayah}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [audio.ayah, audio.playing, audio.surah, num])
 
+  // One scroll handler feeds both the resume position and the play-from point.
   useEffect(() => {
     if (!data) return
     const record = () => {
@@ -69,13 +72,15 @@ export default function SurahReader() {
       if (!rows?.length) return
       for (const r of rows) {
         if (r.getBoundingClientRect().bottom > 120) {
-          store.setLastRead({ surah: num, ayah: Number(r.dataset.ayah) })
+          const v = Number(r.dataset.ayah)
+          setReadingAt(v)
+          store.setLastRead({ surah: num, ayah: v, page: data.s.ayahs.find(a => a.v === v)?.p })
           break
         }
       }
     }
-    const onScroll = debounce(record, 700)
-    const t = setTimeout(record, 800)
+    const onScroll = debounce(record, 300)
+    const t = setTimeout(record, 600)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll) }
   }, [data, num])
@@ -84,11 +89,14 @@ export default function SurahReader() {
     setBookmarks(await store.toggleQuranBookmark(num, a.v, (a.en || '').slice(0, 120)))
   }, [num])
 
+  if (error) return <LoadError message={error} onRetry={retry} />
   if (!data || !info) return <Loading label="Opening the muṣḥaf" />
 
+  const ayahs = data.s.ayahs
+  const meta = data.meta
   const showBismillah = num !== 1 && num !== 9
   const trKey = settings.translation === 'e2' ? 'e2' : 'en'
-  const firstPage = data.ayahs[0]?.p
+  const currentPage = ayahs.find(a => a.v === readingAt)?.p || info.page
 
   return (
     <div ref={containerRef} className="min-h-full pb-32">
@@ -101,11 +109,12 @@ export default function SurahReader() {
           </button>
           <IconButton
             name="book" label="Muṣḥaf page view"
-            onClick={() => { set({ readerMode: 'mushaf' }); nav(`/mushaf/${firstPage}`) }}
+            onClick={() => { set({ readerMode: 'mushaf' }); nav(`/mushaf/${currentPage}`) }}
           />
           <IconButton
-            name="play" label="Play this surah"
-            onClick={() => player.play(num, 1, data.ayahs.length)}
+            name="play"
+            label={`Play from ayah ${readingAt}`}
+            onClick={() => player.play(num, readingAt, ayahs.length)}
           />
           <IconButton name="settings" label="Reading settings" onClick={() => setSheet('settings')} />
         </div>
@@ -124,7 +133,7 @@ export default function SurahReader() {
       </div>
 
       <div className="divide-y divide-line/60">
-        {data.ayahs.map(a => {
+        {ayahs.map(a => {
           const id = `${num}:${a.v}`
           const isPlaying = audio.playing && audio.surah === num && audio.ayah === a.v
           const inRange = audio.range && audio.surah === num && a.v >= audio.range.from && a.v <= audio.range.to
@@ -168,7 +177,7 @@ export default function SurahReader() {
               {isOpen && (
                 <AyahActions
                   surah={num} ayah={a} info={info}
-                  ayahCount={data.ayahs.length}
+                  ayahCount={ayahs.length}
                   bookmarked={bookmarked.has(id)}
                   note={notes[id]?.text || ''}
                   playing={isPlaying}
@@ -195,7 +204,7 @@ export default function SurahReader() {
         open={sheet === 'settings'} onClose={() => setSheet(null)}
         settings={settings} set={set}
         onOpenReciters={() => setSheet('reciter')}
-        onMushaf={() => { set({ readerMode: 'mushaf' }); nav(`/mushaf/${firstPage}`) }}
+        onMushaf={() => { set({ readerMode: 'mushaf' }); nav(`/mushaf/${currentPage}`) }}
       />
       <Sheet open={sheet === 'reciter'} onClose={() => setSheet(null)} title="Reciter">
         <ReciterList

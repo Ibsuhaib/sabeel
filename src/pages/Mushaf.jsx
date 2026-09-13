@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { pageAyahs, quranMeta } from '../lib/data.js'
+import { useData } from '../lib/useData.js'
 import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
 import { player } from '../lib/audio.js'
-import { usePlayer } from '../lib/reciters.js'
+import { usePlayer, loadReciters } from '../lib/reciters.js'
 import { toArabicNumber } from '../lib/format.js'
-import { Loading, Sheet, IconButton, Button } from '../components/ui.jsx'
+import { Loading, LoadError, Sheet, IconButton, Button, Choice } from '../components/ui.jsx'
+import { ReciterList } from '../components/Player.jsx'
 import Icon from '../components/Icon.jsx'
 
 const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
@@ -21,31 +23,30 @@ export default function Mushaf() {
   const nav = useNavigate()
   const { settings, set } = useSettings()
 
-  const [data, setData] = useState(null)
-  const [meta, setMeta] = useState(null)
+  const { data, error, retry } = useData(
+    () => Promise.all([pageAyahs(page), quranMeta()]).then(([p, meta]) => ({ ...p, meta })),
+    [page],
+    { label: 'this page' }
+  )
+
   const [selected, setSelected] = useState(null)
   const [sheet, setSheet] = useState(null)
   const [bookmarks, setBookmarks] = useState([])
+  const [catalogue, setCatalogue] = useState(null)
+  const [followRecitation, setFollowRecitation] = useState(true)
 
   const audio = usePlayer()
   const touch = useRef(null)
 
-  useEffect(() => { quranMeta().then(setMeta) }, [])
-  useEffect(() => {
-    setData(null)
-    setSelected(null)
-    pageAyahs(page).then(setData)
-    window.scrollTo(0, 0)
-  }, [page])
+  useEffect(() => { loadReciters().then(setCatalogue) }, [])
   useEffect(() => { store.bookmarksQuran().then(setBookmarks) }, [])
+  useEffect(() => { setSelected(null); window.scrollTo(0, 0) }, [page])
 
   const go = useCallback(delta => {
     const next = page + delta
     if (next >= 1 && next <= TOTAL_PAGES) nav(`/mushaf/${next}`)
   }, [page, nav])
 
-  // Remember the page as the reading position too, so Continue Reading works
-  // whichever mode you were last in.
   useEffect(() => {
     if (data?.ayahs?.length) {
       const first = data.ayahs[0]
@@ -62,13 +63,38 @@ export default function Mushaf() {
     return () => window.removeEventListener('keydown', onKey)
   }, [go])
 
+  // Follow the recitation across page breaks. Without this, listening to a whole
+  // juz in page mode would leave you staring at the page you started on.
+  const playingPage = useMemo(() => {
+    if (!audio.playing || !audio.ayah || !data) return null
+    const here = data.ayahs.find(a => a.surah === audio.surah && a.v === audio.ayah)
+    return here ? page : 'elsewhere'
+  }, [audio.playing, audio.surah, audio.ayah, data, page])
+
+  useEffect(() => {
+    if (!followRecitation || playingPage !== 'elsewhere' || !audio.playing) return
+    let cancelled = false
+    import('../lib/data.js').then(({ pageOf }) => pageOf(audio.surah, audio.ayah)).then(p => {
+      if (!cancelled && p && p !== page) nav(`/mushaf/${p}`, { replace: true })
+    })
+    return () => { cancelled = true }
+  }, [playingPage, audio.playing, audio.surah, audio.ayah, followRecitation, page, nav])
+
   const bookmarked = useMemo(() => new Set(bookmarks.map(b => b.id)), [bookmarks])
 
-  if (!data || !meta) return <Loading label="Opening the muṣḥaf" />
+  if (error) return <LoadError message={error} onRetry={retry} />
+  if (!data) return <Loading label="Opening the muṣḥaf" />
 
-  const { page: info, ayahs } = data
+  const { page: info, ayahs, meta } = data
   const surahsOnPage = [...new Set(ayahs.map(a => a.surah))]
   const title = surahsOnPage.map(n => meta.surahs.find(s => s.n === n)?.en).join(' · ')
+
+  // Play from the top of the page you are actually looking at.
+  function playPage() {
+    const first = ayahs[0]
+    const surahInfo = meta.surahs.find(s => s.n === first.surah)
+    player.play(first.surah, first.v, surahInfo?.ayahs)
+  }
 
   function onTouchStart(e) { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
   function onTouchEnd(e) {
@@ -94,7 +120,8 @@ export default function Mushaf() {
             name="quran" label="Switch to scrolling view"
             onClick={() => { set({ readerMode: 'scroll' }); nav(`/quran/${ayahs[0].surah}?ayah=${ayahs[0].v}`) }}
           />
-          <IconButton name="settings" label="Reading settings" onClick={() => setSheet('settings')} />
+          <IconButton name="play" label="Play from this page" onClick={playPage} />
+          <IconButton name="settings" label="Muṣḥaf settings" onClick={() => setSheet('settings')} />
         </div>
       </header>
 
@@ -119,8 +146,8 @@ export default function Mushaf() {
                   )}
                   <span
                     onClick={() => setSelected(selected === id ? null : id)}
-                    className={`cursor-pointer transition-colors ${
-                      isPlaying ? 'text-brand' : selected === id ? 'bg-brand/10 rounded' : ''
+                    className={`cursor-pointer transition-colors rounded ${
+                      isPlaying ? 'text-brand bg-brand/10' : selected === id ? 'bg-brand/10' : ''
                     }`}
                   >
                     {a.ar}
@@ -147,10 +174,16 @@ export default function Mushaf() {
         <AyahBar
           id={selected} ayahs={ayahs} meta={meta}
           bookmarked={bookmarked.has(selected)}
+          playing={audio.playing && `${audio.surah}:${audio.ayah}` === selected}
           onClose={() => setSelected(null)}
           onPlay={a => {
             const surahInfo = meta.surahs.find(s => s.n === a.surah)
-            player.play(a.surah, a.v, surahInfo?.ayahs)
+            player.toggle(a.surah, a.v, surahInfo?.ayahs)
+          }}
+          onLoop={a => {
+            const surahInfo = meta.surahs.find(s => s.n === a.surah)
+            player.setSurahLength(surahInfo?.ayahs)
+            player.setRange(a.v, Math.min(a.v + 4, surahInfo?.ayahs || a.v))
           }}
           onBookmark={async a => setBookmarks(await store.toggleQuranBookmark(a.surah, a.v, (a.en || '').slice(0, 120)))}
           translation={settings.translation}
@@ -177,12 +210,23 @@ export default function Mushaf() {
         open={sheet === 'jump'} onClose={() => setSheet(null)}
         meta={meta} current={page} onJump={p => { nav(`/mushaf/${p}`); setSheet(null) }}
       />
-      <MushafSettings open={sheet === 'settings'} onClose={() => setSheet(null)} settings={settings} set={set} />
+      <MushafSettings
+        open={sheet === 'settings'} onClose={() => setSheet(null)}
+        settings={settings} set={set}
+        follow={followRecitation} onFollow={setFollowRecitation}
+        onOpenReciters={() => setSheet('reciter')}
+      />
+      <Sheet open={sheet === 'reciter'} onClose={() => setSheet(null)} title="Reciter">
+        <ReciterList
+          catalogue={catalogue} currentId={settings.reciter}
+          onSelect={id => { set({ reciter: id }); setSheet(null) }}
+        />
+      </Sheet>
     </div>
   )
 }
 
-function AyahBar({ id, ayahs, meta, bookmarked, onClose, onPlay, onBookmark, translation }) {
+function AyahBar({ id, ayahs, meta, bookmarked, playing, onClose, onPlay, onLoop, onBookmark, translation }) {
   const [sn, av] = id.split(':').map(Number)
   const a = ayahs.find(x => x.surah === sn && x.v === av)
   if (!a) return null
@@ -194,13 +238,14 @@ function AyahBar({ id, ayahs, meta, bookmarked, onClose, onPlay, onBookmark, tra
       <div className="bg-surf border border-line rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[11px] text-brand font-medium flex-1">{surahName} {sn}:{av}</span>
-          <button onClick={onClose} className="tap text-muted p-1"><Icon name="close" size={14} /></button>
+          <button onClick={onClose} className="tap text-muted p-1" aria-label="Close"><Icon name="close" size={14} /></button>
         </div>
         <p className="translation text-ink/85">{text}</p>
         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-line/60">
-          <Act icon="play" label="Play" onClick={() => onPlay(a)} />
+          <Act icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} active={playing} onClick={() => onPlay(a)} />
+          <Act icon="reset" label="Loop 5" onClick={() => onLoop(a)} />
           <Act icon="bookmark" label={bookmarked ? 'Saved' : 'Save'} active={bookmarked} onClick={() => onBookmark(a)} />
-          <Act icon="quran" label="Open in reader" to={`/quran/${sn}?ayah=${av}`} />
+          <Act icon="quran" label="In reader" to={`/quran/${sn}?ayah=${av}`} />
         </div>
       </div>
     </div>
@@ -249,10 +294,7 @@ function JumpSheet({ open, onClose, meta, current, onJump }) {
         <ul className="divide-y divide-line">
           {meta.surahs.map(s => (
             <li key={s.n}>
-              <button
-                onClick={() => onJump(s.page)}
-                className="tap w-full flex items-center gap-3 px-4 py-2.5 text-left"
-              >
+              <button onClick={() => onJump(s.page)} className="tap w-full flex items-center gap-3 px-4 py-2.5 text-left">
                 <span className="w-7 text-xs tabular-nums text-muted">{s.n}</span>
                 <span className="flex-1 text-sm truncate">{s.en}</span>
                 <span className="text-[11px] text-muted tabular-nums">p. {s.page}</span>
@@ -281,11 +323,20 @@ function JumpSheet({ open, onClose, meta, current, onJump }) {
   )
 }
 
-function MushafSettings({ open, onClose, settings, set }) {
+function MushafSettings({ open, onClose, settings, set, follow, onFollow, onOpenReciters }) {
   return (
     <Sheet open={open} onClose={onClose} title="Muṣḥaf settings">
       <div className="py-2">
-        <div className="px-4 py-3">
+        <div className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">View</div>
+        <Choice
+          columns={2} value={settings.readerMode} onChange={v => set({ readerMode: v })}
+          options={[
+            { id: 'mushaf', label: 'Muṣḥaf pages', note: 'You are here' },
+            { id: 'scroll', label: 'Scrolling', note: 'Use the header button to switch' }
+          ]}
+        />
+
+        <div className="px-4 py-4">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Arabic size</div>
           <input
             type="range" min={20} max={54} value={settings.arabicSize}
@@ -293,7 +344,7 @@ function MushafSettings({ open, onClose, settings, set }) {
             className="w-full accent-[rgb(var(--c-brand))]"
           />
         </div>
-        <div className="px-4 py-3">
+        <div className="px-4 pb-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Line spacing</div>
           <input
             type="range" min={1.6} max={3.4} step={0.1} value={settings.arabicLeading}
@@ -301,6 +352,7 @@ function MushafSettings({ open, onClose, settings, set }) {
             className="w-full accent-[rgb(var(--c-brand))]"
           />
         </div>
+
         <div className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Arabic font</div>
         <div className="px-4 space-y-2 pb-4">
           {['Amiri Quran', 'Scheherazade New', 'Noto Naskh Arabic'].map(f => (
@@ -312,6 +364,28 @@ function MushafSettings({ open, onClose, settings, set }) {
             >{f}</button>
           ))}
         </div>
+
+        <div className="border-t border-line">
+          <button
+            onClick={() => onFollow(!follow)} role="switch" aria-checked={follow}
+            className="tap w-full flex items-center gap-3 px-4 py-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px]">Turn pages with the recitation</span>
+              <span className="block text-xs text-muted mt-0.5">Follow the reciter across page breaks</span>
+            </span>
+            <span className={`shrink-0 w-11 h-6 rounded-full p-0.5 transition-colors ${follow ? 'bg-brand' : 'bg-line'}`}>
+              <span className={`block w-5 h-5 rounded-full bg-surf transition-transform ${follow ? 'translate-x-5' : ''}`} />
+            </span>
+          </button>
+        </div>
+
+        <div className="px-4 pt-3 pb-2">
+          <Button variant="soft" size="lg" onClick={onOpenReciters}>
+            <Icon name="play" size={15} />Choose a reciter
+          </Button>
+        </div>
+
         <p className="px-6 pb-4 text-[11px] text-muted/80 leading-relaxed">
           Page mode shows the Quran in the 604-page Madani layout, one page at a time.
           Line breaks follow the text flow at your chosen size rather than the printed

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { hadithBook, hadithCollection } from '../lib/data.js'
 import { store } from '../lib/store.js'
-import { Screen, Header, Loading, IconButton, Empty } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, IconButton, Empty } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 import HadithCard from '../components/HadithCard.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -11,19 +12,19 @@ const PAGE = 25
 export default function HadithBook() {
   const { id, book } = useParams()
   const [params] = useSearchParams()
-  const [data, setData] = useState(null)
-  const [collection, setCollection] = useState(null)
+  const { data: loaded, error, retry } = useData(
+    () => Promise.all([hadithBook(id, book), hadithCollection(id)]).then(([d, c]) => ({ d, c })),
+    [id, book],
+    { label: 'this book' }
+  )
+  const data = loaded?.d
+  const collection = loaded?.c
   const [bookmarks, setBookmarks] = useState([])
   const [q, setQ] = useState('')
   const [showArabic, setShowArabic] = useState(true)
   const [limit, setLimit] = useState(PAGE)
 
-  useEffect(() => {
-    setData(null)
-    setLimit(PAGE)
-    hadithBook(id, book).then(setData)
-    hadithCollection(id).then(setCollection)
-  }, [id, book])
+  useEffect(() => { setLimit(PAGE) }, [id, book])
 
   useEffect(() => { store.bookmarksHadith().then(setBookmarks) }, [])
 
@@ -44,6 +45,7 @@ export default function HadithBook() {
 
   const meta = collection?.books.find(b => b.n === Number(book))
 
+  if (error) return <LoadError message={error} onRetry={retry} />
   if (!data || !collection) return <Loading label="Loading hadith" />
 
   return (

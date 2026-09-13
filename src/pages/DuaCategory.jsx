@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { duaCategory } from '../lib/data.js'
-import { Screen, Header, Loading, Card, IconButton } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, Card, IconButton } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
 
 export default function DuaCategory() {
   const { slug } = useParams()
-  const [cat, setCat] = useState(null)
+  const { data: cat, error, retry } = useData(() => duaCategory(slug), [slug], { label: 'these duas' })
   const [counts, setCounts] = useState({})
   const [showArabicOnly, setShowArabicOnly] = useState(false)
 
-  useEffect(() => { setCat(null); duaCategory(slug).then(setCat) }, [slug])
-
+  if (error) return <LoadError message={error} onRetry={retry} />
   if (!cat) return <Loading />
 
   const tick = (id, target) => {

@@ -3,18 +3,18 @@ import { Link } from 'react-router-dom'
 import { quranMeta } from '../lib/data.js'
 import { store } from '../lib/store.js'
 import { toArabicNumber } from '../lib/format.js'
-import { Screen, Header, Loading, IconButton, Card } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, IconButton, Card } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
 
 const JUZ = Array.from({ length: 30 }, (_, i) => i + 1)
 
 export default function QuranIndex() {
-  const [meta, setMeta] = useState(null)
+  const { data: meta, error, retry } = useData(quranMeta, [], { label: 'the surah list' })
   const [q, setQ] = useState('')
   const [tab, setTab] = useState('surah')
   const [last, setLast] = useState(null)
 
-  useEffect(() => { quranMeta().then(setMeta) }, [])
   useEffect(() => { store.lastRead().then(setLast) }, [])
 
   const surahs = useMemo(() => {
@@ -29,6 +29,7 @@ export default function QuranIndex() {
     )
   }, [meta, q])
 
+  if (error) return <LoadError message={error} onRetry={retry} back={false} />
   if (!meta) return <Loading label="Loading the Quran" />
 
   return (

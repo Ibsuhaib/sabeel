@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { hadithCollection, downloadCollection } from '../lib/data.js'
 import { store } from '../lib/store.js'
-import { Screen, Header, Loading, Card, Button } from '../components/ui.jsx'
+import { Screen, Header, Loading, LoadError, Card, Button } from '../components/ui.jsx'
+import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
 
 export default function HadithCollection() {
   const { id } = useParams()
-  const [c, setC] = useState(null)
+  const { data: c, error, retry } = useData(() => hadithCollection(id), [id], { label: 'this collection' })
   const [q, setQ] = useState('')
   const [offline, setOffline] = useState(false)
   const [progress, setProgress] = useState(null)
 
-  useEffect(() => { hadithCollection(id).then(setC) }, [id])
   useEffect(() => { store.offlineCollections().then(list => setOffline(list.includes(id))) }, [id])
 
   const books = useMemo(() => {
@@ -30,6 +30,7 @@ export default function HadithCollection() {
     setProgress(null)
   }
 
+  if (error) return <LoadError message={error} onRetry={retry} />
   if (!c) return <Loading label="Loading collection" />
 
   return (

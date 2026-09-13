@@ -4,14 +4,39 @@ const mem = new Map()
 
 const BASE = import.meta.env.BASE_URL || '/'
 
+// One dropped packet on a phone should not read as "this surah is broken", so
+// every fetch gets a timeout and one silent retry before it gives up. A failure
+// evicts the cache entry, so a later retry genuinely re-fetches.
+async function fetchOnce(url, timeoutMs) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const r = await fetch(url, { signal: ctrl.signal })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return await r.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function load(path) {
   if (mem.has(path)) return mem.get(path)
-  const p = fetch(`${BASE}data/${path}`.replace(/\/{2,}/g, '/'))
-    .then(r => {
-      if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`)
-      return r.json()
-    })
-    .catch(e => { mem.delete(path); throw e })
+  const url = `${BASE}data/${path}`.replace(/\/{2,}/g, '/')
+
+  const p = (async () => {
+    try {
+      return await fetchOnce(url, 15000)
+    } catch (first) {
+      try {
+        return await fetchOnce(url, 20000)
+      } catch (second) {
+        mem.delete(path)
+        const why = second.name === 'AbortError' ? 'the request timed out' : second.message
+        throw new Error(`Could not load ${path} — ${why}.`)
+      }
+    }
+  })()
+
   mem.set(path, p)
   return p
 }
@@ -36,7 +61,7 @@ export async function ayahRange(fromSurah, fromAyah, count) {
 export async function pageAyahs(pageNumber) {
   const meta = await quranMeta()
   const page = meta.pages.find(p => p.p === Number(pageNumber))
-  if (!page) return null
+  if (!page) throw new Error(`There is no page ${pageNumber} — the muṣḥaf has 604.`)
 
   const out = []
   for (let n = page.from.s; n <= page.to.s; n++) {

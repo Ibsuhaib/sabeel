@@ -86,6 +86,25 @@ export function Empty({ icon = 'info', title, body, action }) {
   )
 }
 
+// Shown instead of a spinner that never stops. Always offers a way out.
+export function LoadError({ message, onRetry, back = true }) {
+  return (
+    <div className="text-center px-8 py-16">
+      <div className="inline-flex text-amber-500 mb-3"><Icon name="warn" size={32} /></div>
+      <p className="font-medium">This did not load</p>
+      <p className="text-sm text-muted mt-2 leading-relaxed break-words">{message}</p>
+      <p className="text-[11px] text-muted/70 mt-3 leading-relaxed">
+        Everything Sabeel shows is a file on this device or a one-time download. Nothing is
+        lost — try again.
+      </p>
+      <div className="mt-5 flex gap-2 justify-center">
+        {onRetry && <Button onClick={onRetry}><Icon name="reset" size={15} />Try again</Button>}
+        {back && <Button to="/" variant="soft">Go home</Button>}
+      </div>
+    </div>
+  )
+}
+
 export function Button({ children, onClick, to, variant = 'primary', size = 'md', className = '', ...rest }) {
   const base = 'tap inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors disabled:opacity-40'
   const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2.5 text-sm', lg: 'px-5 py-3 text-[15px] w-full' }
