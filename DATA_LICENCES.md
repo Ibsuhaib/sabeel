@@ -92,6 +92,26 @@ Rule for this directory: **a recording ships only if its licence is stated somew
 its author is identified.** Users who want a particular muadhdhin can load their own file, which
 never leaves their device.
 
+### The Fajr adhan is a different recording
+
+The Fajr call adds the tathwīb — *aṣ-ṣalātu khayrun min an-nawm*, "prayer is better than sleep" —
+after the two *ḥayya ʿala-l-falāḥ*. A standard recording used for Fajr is simply the wrong adhan.
+The app therefore has two independent adhan slots and an Android notification channel for each.
+
+No Fajr-specific recording with a checkable licence has been found yet, so the Fajr slot currently
+offers the same built-in recording and, more usefully, its own "load your own file" option. If you
+find a freely-licensed Fajr adhan, open an issue — it is a one-line addition to
+`scripts/fetch-adhan.mjs` (`type: 'fajr'`).
+
+### Searched and rejected
+
+| Source | Why not |
+|---|---|
+| `cdn.aladhan.com/audio/adhans/` | `a3.mp3` is tagged as Karl Jenkins' "The Armed Man" (2001), copyrighted; the rest carry no identifying tags at all |
+| `islamcan.com/audio/adhan/` | Twelve files, no muadhdhin named in any of them, no licence stated |
+| "Call to prayer by Sabah Fakhry" (Commons) | Marked public domain but credited to YouTube — not a claim to rely on for a named singer's recording |
+| Hassan II Mosque adhan (Commons) | Genuinely CC BY-SA 4.0, but a 30 MB WAV; needs transcoding before it can ship |
+
 ## Fonts
 
 | Item | Source | Status | Notes |

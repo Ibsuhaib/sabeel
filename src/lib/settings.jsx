@@ -24,7 +24,10 @@ export const DEFAULTS = {
   notifications: {
     enabled: false,
     sound: 'adhan',            // adhan | beep | silent
+    adhanId: 'aaqib-azeez',    // built-in recording for every prayer but Fajr
+    fajrAdhanId: 'aaqib-azeez',// Fajr has its own: it carries the tathwīb
     useCustomAdhan: false,     // the user's own file, kept in IndexedDB
+    useCustomFajrAdhan: false,
     volume: 1,
     vibrate: true,
     reminderMinutes: 0,        // "prayer is in N minutes" nudge, 0 = off

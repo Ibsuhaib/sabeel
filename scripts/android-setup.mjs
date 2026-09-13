@@ -57,13 +57,25 @@ log(`  manifest: ${added} permission(s) added`)
 /* -------------------------- adhan notification sound --------------------- */
 
 const raw = ensure(path.join(MAIN, 'res', 'raw'))
-const adhanSrc = path.join(ROOT, 'public', 'adhan', 'adhan-aaqib-azeez.mp3')
-const adhanDst = path.join(raw, 'adhan.mp3')
-if (fs.existsSync(adhanSrc)) {
-  fs.copyFileSync(adhanSrc, adhanDst)
-  log(`  res/raw/adhan.mp3 (${(fs.statSync(adhanDst).size / 1024).toFixed(0)} KB)`)
-} else {
-  log('  ! adhan mp3 missing — run `npm run data:adhan` first')
+// Android notification sounds are raw resources, chosen per channel. Fajr has
+// its own channel because its adhan is a different recording; until a
+// licence-clear Fajr recording is shipped, it falls back to the standard one so
+// the channel is never silent.
+const catalogue = path.join(ROOT, 'public', 'data', 'adhan.json')
+const adhanDir = path.join(ROOT, 'public', 'adhan')
+let list = []
+try { list = JSON.parse(fs.readFileSync(catalogue, 'utf8')).adhans || [] } catch { /* not built yet */ }
+
+const standard = list.find(a => a.type !== 'fajr') || list[0]
+const fajr = list.find(a => a.type === 'fajr') || standard
+
+for (const [res, entry] of [['adhan.mp3', standard], ['adhan_fajr.mp3', fajr]]) {
+  if (!entry) { log(`  ! ${res} missing — run \`npm run data:adhan\` first`); continue }
+  const src = path.join(adhanDir, entry.file)
+  if (!fs.existsSync(src)) { log(`  ! ${entry.file} not found in public/adhan`); continue }
+  const dst = path.join(raw, res)
+  fs.copyFileSync(src, dst)
+  log(`  res/raw/${res} ← ${entry.muadhdhin} (${(fs.statSync(dst).size / 1024).toFixed(0)} KB)`)
 }
 
 /* --------------------------- status bar icon ----------------------------- */

@@ -10,7 +10,11 @@
 // unlocks the AudioContext for the rest of the session.
 import { get, set } from 'idb-keyval'
 
-const CUSTOM_KEY = 'adhan.custom'
+// Two independent slots. The Fajr adhan is not the same call: it carries the
+// tathwīb — "aṣ-ṣalātu khayrun min an-nawm", prayer is better than sleep —
+// after the two "ḥayya ʿala-l-falāḥ", and using a standard recording for Fajr
+// is simply the wrong adhan.
+const CUSTOM_KEYS = { default: 'adhan.custom', fajr: 'adhan.custom.fajr' }
 
 let ctx = null
 let unlocked = false
@@ -74,15 +78,16 @@ export function playBeep({ repeats = 2 } = {}) {
   return true
 }
 
-export async function customAdhan() {
-  return (await get(CUSTOM_KEY)) || null
+export async function customAdhan(slot = 'default') {
+  return (await get(CUSTOM_KEYS[slot] || CUSTOM_KEYS.default)) || null
 }
 
-export async function setCustomAdhan(file) {
-  if (!file) { await set(CUSTOM_KEY, null); return null }
+export async function setCustomAdhan(file, slot = 'default') {
+  const key = CUSTOM_KEYS[slot] || CUSTOM_KEYS.default
+  if (!file) { await set(key, null); return null }
   const blob = new Blob([await file.arrayBuffer()], { type: file.type || 'audio/mpeg' })
-  const record = { name: file.name, type: blob.type, size: blob.size, blob }
-  await set(CUSTOM_KEY, record)
+  const record = { name: file.name, type: blob.type, size: blob.size, blob, slot }
+  await set(key, record)
   return record
 }
 
@@ -96,12 +101,12 @@ export function stopSound() {
 
 // Returns the <audio> element so a caller can stop it when the notification is
 // dismissed — an adhan should not keep playing after you have acknowledged it.
-export async function playAdhan({ adhanFile, useCustom = false, volume = 1 } = {}) {
+export async function playAdhan({ adhanFile, useCustom = false, volume = 1, slot = 'default' } = {}) {
   stopSound()
   let src = null
 
   if (useCustom) {
-    const rec = await customAdhan()
+    const rec = await customAdhan(slot)
     if (rec?.blob) src = URL.createObjectURL(rec.blob)
   }
   if (!src && adhanFile) src = `${import.meta.env.BASE_URL || '/'}adhan/${adhanFile}`.replace(/\/{2,}/g, '/')
@@ -126,11 +131,18 @@ export function vibrate(pattern = [200, 100, 200, 100, 400]) {
 }
 
 // One entry point so callers never have to branch on the mode themselves.
-export async function playFor(settings, { adhanFile } = {}) {
+// `prayer` decides which adhan slot is used — Fajr has its own.
+export async function playFor(settings, { adhanFile, fajrFile, prayer } = {}) {
   const n = settings.notifications || {}
   if (n.vibrate) vibrate()
   if (n.sound === 'silent') return 'silent'
   if (n.sound === 'beep') return playBeep() ? 'beep' : 'blocked'
-  const el = await playAdhan({ adhanFile, useCustom: n.useCustomAdhan, volume: n.volume ?? 1 })
+
+  const isFajr = prayer === 'fajr'
+  const slot = isFajr ? 'fajr' : 'default'
+  const useCustom = isFajr ? !!n.useCustomFajrAdhan : !!n.useCustomAdhan
+  const file = isFajr ? (fajrFile || adhanFile) : adhanFile
+
+  const el = await playAdhan({ adhanFile: file, useCustom, volume: n.volume ?? 1, slot })
   return el ? 'adhan' : 'blocked'
 }

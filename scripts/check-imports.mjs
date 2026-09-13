@@ -12,7 +12,14 @@ const WATCHED = [
   'useState', 'useEffect', 'useMemo', 'useRef', 'useCallback', 'lazy', 'Suspense',
   'Icon', 'Card', 'Button', 'Sheet', 'Toggle', 'Choice', 'Loading', 'LoadError',
   'Empty', 'Screen', 'Header', 'Section', 'Row', 'IconButton', 'Stepper',
-  'useData', 'player', 'store', 'usePlayer', 'HadithCard', 'Player', 'ReciterList'
+  'useData', 'player', 'store', 'usePlayer', 'HadithCard', 'Player', 'ReciterList',
+  // Sound and notification helpers — `customAdhan` survived an import removal
+  // once and took the whole app down with a ReferenceError.
+  'customAdhan', 'setCustomAdhan', 'playAdhan', 'playBeep', 'playFor', 'prime',
+  'stopSound', 'vibrate', 'schedule', 'sendTest', 'upcoming', 'AdhanPicker',
+  'DownloadAudio', 'markPage', 'completeToday', 'createPlan'
+  // Deliberately NOT watched: names common as local variables (progress, data,
+  // status) would be false positives on every destructured useState.
 ]
 
 function sources(dir, out = []) {

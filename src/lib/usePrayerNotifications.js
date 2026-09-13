@@ -7,19 +7,28 @@ import { adhanCatalogue } from './data.js'
 // only while the Prayer screen happens to be open.
 export function usePrayerNotifications(settings) {
   const adhanFile = useRef(null)
+  const fajrFile = useRef(null)
   const [granted, setGranted] = useState(false)
   useEffect(() => { effectivePermission().then(p => setGranted(p === 'granted')) }, [settings.notifications?.enabled])
   const enabled = !!settings.notifications?.enabled && granted && !!settings.location
 
   useEffect(() => {
     if (!enabled) return
-    adhanCatalogue().then(c => { adhanFile.current = c?.adhans?.[0]?.file || null }).catch(() => {})
+    adhanCatalogue().then(c => {
+      const byId = id => c?.adhans?.find(a => a.id === id)?.file
+      const first = c?.adhans?.[0]?.file || null
+      adhanFile.current = byId(settings.notifications?.adhanId) || first
+      fajrFile.current = byId(settings.notifications?.fajrAdhanId) || adhanFile.current
+    }).catch(() => {})
   }, [enabled])
 
   useEffect(() => {
     if (!enabled) { cancelAll(); return }
 
-    const onFire = () => { playFor(settings, { adhanFile: adhanFile.current }) }
+    // Which prayer fired decides which adhan plays.
+    const onFire = (item) => {
+      playFor(settings, { adhanFile: adhanFile.current, fajrFile: fajrFile.current, prayer: item?.prayer })
+    }
 
     // Anything that came due while the app was closed, then arm what is next.
     catchUp(settings, { onFire })

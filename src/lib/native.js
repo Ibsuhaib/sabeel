@@ -62,8 +62,11 @@ export async function nativePermission() {
 // Android channels decide the sound and importance. Three of them, one per
 // sound mode, because a channel's sound cannot be changed after it is created —
 // switching channel is the only way to switch sound on Android 8+.
+// Fajr gets its own channel because its adhan is a different recording — the one
+// with the tathwīb — and a channel's sound is fixed once Android has created it.
 const CHANNELS = {
   adhan: { id: 'sabeel-adhan', name: 'Prayer times (adhan)', sound: 'adhan', importance: 5 },
+  adhanFajr: { id: 'sabeel-adhan-fajr', name: 'Fajr (adhan)', sound: 'adhan_fajr', importance: 5 },
   beep: { id: 'sabeel-chime', name: 'Prayer times (chime)', sound: undefined, importance: 5 },
   silent: { id: 'sabeel-silent', name: 'Prayer times (silent)', sound: undefined, importance: 3 }
 }
@@ -107,8 +110,11 @@ export async function scheduleNative(items, settings) {
   try { await LN.cancel({ notifications: (await LN.getPending()).notifications || [] }) } catch { /* nothing pending */ }
 
   const mode = settings.notifications?.sound || 'adhan'
-  const channel = CHANNELS[mode] || CHANNELS.adhan
   const place = settings.location?.label
+  // Fajr routes to its own channel only when the adhan is the chosen sound;
+  // a chime or silence is the same whatever the prayer.
+  const channelFor = item =>
+    mode === 'adhan' && item.prayer === 'fajr' ? CHANNELS.adhanFajr : (CHANNELS[mode] || CHANNELS.adhan)
 
   const payload = items.slice(0, 60).map(item => ({
     id: idFor(item),
@@ -116,7 +122,7 @@ export async function scheduleNative(items, settings) {
     body: item.kind === 'reminder'
       ? `${item.label} is in ${item.minutes} minute${item.minutes === 1 ? '' : 's'}`
       : place ? `It is time for ${item.label} in ${place}` : `It is time for ${item.label}`,
-    channelId: channel.id,
+    channelId: channelFor(item).id,
     // allowWhileIdle is what gets it past Doze; without it Fajr silently slips.
     schedule: { at: item.at, allowWhileIdle: true },
     // Stays in the shade until the user actually deals with it.
@@ -130,7 +136,7 @@ export async function scheduleNative(items, settings) {
   if (!payload.length) return { scheduled: 0, native: true }
   try {
     await LN.schedule({ notifications: payload })
-    return { scheduled: payload.length, native: true, channel: channel.id }
+    return { scheduled: payload.length, native: true, mode }
   } catch (e) {
     return { scheduled: 0, native: true, error: e.message }
   }

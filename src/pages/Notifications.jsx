@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSettings } from '../lib/settings.jsx'
 import { PRAYERS, FARD } from '../lib/prayer.js'
 import { fmtTime } from '../lib/format.js'
@@ -8,7 +8,8 @@ import {
   supported, permission, requestPermission, hasTriggers,
   schedule, sendTest, upcoming, describeReliability, describeReliabilityAsync
 } from '../lib/notifications.js'
-import { prime, playBeep, playAdhan, stopSound, vibrate, setCustomAdhan, customAdhan } from '../lib/sounds.js'
+import { prime, playBeep, playAdhan, stopSound, vibrate } from '../lib/sounds.js'
+import AdhanPicker from '../components/AdhanPicker.jsx'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Empty } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -27,12 +28,9 @@ export default function Notifications() {
   const [perm, setPerm] = useState(permission())
   const [status, setStatus] = useState(null)
   const [msg, setMsg] = useState(null)
-  const [custom, setCustom] = useState(null)
-  const fileRef = useRef(null)
 
   const { data: adhans } = useData(adhanCatalogue, [], { label: 'the adhan list' })
 
-  useEffect(() => { customAdhan().then(setCustom) }, [])
   useEffect(() => () => stopSound(), [])
 
   // Keep what is armed in step with the settings on this screen.
@@ -72,15 +70,6 @@ export default function Notifications() {
     if (r.ok) preview()
   }
 
-  async function pickFile(file) {
-    if (!file) return
-    if (!file.type.startsWith('audio/')) { setMsg({ tone: 'warn', text: 'That is not an audio file.' }); return }
-    if (file.size > 12 * 1024 * 1024) { setMsg({ tone: 'warn', text: 'Please choose a file under 12 MB.' }); return }
-    const rec = await setCustomAdhan(file)
-    setCustom(rec)
-    patch({ useCustomAdhan: true, sound: 'adhan' })
-    setMsg({ tone: 'ok', text: `Using “${rec.name}”. It stays on this device — nothing is uploaded.` })
-  }
 
   const [reliability, setReliability] = useState(describeReliability())
   useEffect(() => { describeReliabilityAsync().then(setReliability) }, [])
@@ -169,49 +158,44 @@ export default function Notifications() {
                 </div>
 
                 {n.sound === 'adhan' && (
-                  <div className="px-4 mt-4">
-                    <Card className="p-4">
-                      <div className="flex items-start gap-2 mb-3">
-                        <Icon name="info" size={14} className="text-muted shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-muted leading-relaxed">
-                          {adhans?.adhans?.[0]
-                            ? <>
-                                Built-in recording by <strong className="text-ink">{adhans.adhans[0].muadhdhin}</strong>,
-                                {' '}via Wikimedia Commons, {adhans.adhans[0].licence}.
-                              </>
-                            : 'Loading the built-in recording…'}
-                        </p>
-                      </div>
+                  <div className="mt-4 space-y-3">
+                    <AdhanPicker
+                      slot="default"
+                      title="Adhan"
+                      note="Used for Dhuhr, Asr, Maghrib and Isha."
+                      adhans={adhans?.adhans}
+                      selectedId={n.adhanId}
+                      useCustom={!!n.useCustomAdhan}
+                      onSelect={id => patch({ adhanId: id })}
+                      onUseCustom={v => patch({ useCustomAdhan: v })}
+                      onMessage={setMsg}
+                    />
 
-                      <Toggle
-                        checked={!!n.useCustomAdhan && !!custom}
-                        onChange={v => {
-                          if (v && !custom) { fileRef.current?.click(); return }
-                          patch({ useCustomAdhan: v })
-                        }}
-                        label="Use my own adhan"
-                        hint={custom ? custom.name : 'Choose an audio file from this device'}
-                      />
+                    <AdhanPicker
+                      slot="fajr"
+                      title="Fajr adhan"
+                      note="The Fajr call is different — it adds the tathwīb, “aṣ-ṣalātu khayrun min an-nawm” (prayer is better than sleep), after the two ḥayya ʿala-l-falāḥ."
+                      adhans={adhans?.adhans}
+                      selectedId={n.fajrAdhanId}
+                      useCustom={!!n.useCustomFajrAdhan}
+                      onSelect={id => patch({ fajrAdhanId: id })}
+                      onUseCustom={v => patch({ useCustomFajrAdhan: v })}
+                      onMessage={setMsg}
+                    />
 
-                      <input
-                        ref={fileRef} type="file" accept="audio/*" className="hidden"
-                        onChange={e => pickFile(e.target.files?.[0])}
-                      />
-
-                      <div className="flex gap-2 mt-3">
-                        <Button variant="soft" size="sm" onClick={() => fileRef.current?.click()}>
-                          <Icon name="download" size={13} />{custom ? 'Replace file' : 'Choose a file'}
-                        </Button>
-                        {custom && (
-                          <Button
-                            variant="ghost" size="sm"
-                            onClick={async () => { await setCustomAdhan(null); setCustom(null); patch({ useCustomAdhan: false }) }}
-                          >Remove</Button>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-muted/70 mt-3 leading-relaxed">
-                        Your file never leaves this phone. It is stored in the browser's own
-                        storage and included in your data export.
+                    <Card className="mx-4 p-4">
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        <Icon name="info" size={12} className="inline mr-1 -mt-0.5" />
+                        <strong className="text-ink">Why is the built-in list short?</strong>{' '}
+                        An adhan recording is a performance, and the famous ones — the muadhdhins
+                        of the Haramain, the Egyptian masters — are copyrighted. Sabeel only ships
+                        recordings whose licence is stated somewhere checkable, and there are very
+                        few of those. While searching, a file served as an adhan by a well-known
+                        API turned out to be a track from a copyrighted classical work.
+                      </p>
+                      <p className="text-[11px] text-muted leading-relaxed mt-2">
+                        If you have a recording of a muadhdhin you love, load it with the button
+                        above. It stays on your phone, and nothing is uploaded.
                       </p>
                     </Card>
                   </div>
