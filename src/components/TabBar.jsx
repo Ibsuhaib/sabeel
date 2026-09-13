@@ -13,7 +13,7 @@ const TABS = [
 export default function TabBar() {
   const { pathname } = useLocation()
   // The muṣḥaf page is sacred space — no chrome over the text while reading.
-  if (/^\/quran\/\d+/.test(pathname)) return null
+  if (/^\/quran\/\d+/.test(pathname) || /^\/mushaf/.test(pathname)) return null
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-line safe-b">

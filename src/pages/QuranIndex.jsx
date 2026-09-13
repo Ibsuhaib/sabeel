@@ -37,7 +37,10 @@ export default function QuranIndex() {
         title="Quran"
         subtitle="114 surahs · 6,236 ayahs"
         large
-        actions={<IconButton name="search" label="Search the Quran" to="/search" />}
+        actions={<>
+          <IconButton name="book" label="Muṣḥaf page view" to={`/mushaf/${last?.page || 1}`} />
+          <IconButton name="search" label="Search the Quran" to="/search" />
+        </>}
       />
 
       <div className="px-4 pt-3">
@@ -54,6 +57,21 @@ export default function QuranIndex() {
             <Icon name="bookmark" size={16} className="text-brand shrink-0" />
             <span className="text-sm flex-1 min-w-0 truncate">
               Continue — {meta.surahs.find(s => s.n === last.surah)?.en}, ayah {last.ayah}
+            </span>
+            <Icon name="forward" size={16} className="text-muted" />
+          </Card>
+        </div>
+      )}
+
+      {!q && (
+        <div className="px-4 mt-3">
+          <Card as={Link} to={`/mushaf/${last?.page || 1}`} className="px-4 py-3 flex items-center gap-3 tap block">
+            <span className="w-9 h-9 rounded-xl bg-gold/10 text-gold grid place-items-center shrink-0">
+              <Icon name="book" size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Read as a muṣḥaf</span>
+              <span className="block text-[11px] text-muted mt-0.5">604-page Madani layout, one page at a time</span>
             </span>
             <Icon name="forward" size={16} className="text-muted" />
           </Card>

@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import TabBar from './components/TabBar.jsx'
+import Player from './components/Player.jsx'
+import { useReciterSync } from './lib/reciters.js'
 import { Loading } from './components/ui.jsx'
 import { useSettings } from './lib/settings.jsx'
 
@@ -13,6 +15,8 @@ import DuaIndex from './pages/DuaIndex.jsx'
 import More from './pages/More.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 
+const Mushaf = lazy(() => import('./pages/Mushaf.jsx'))
+const HadithLookup = lazy(() => import('./pages/HadithLookup.jsx'))
 const HadithCollection = lazy(() => import('./pages/HadithCollection.jsx'))
 const HadithBook = lazy(() => import('./pages/HadithBook.jsx'))
 const DuaCategory = lazy(() => import('./pages/DuaCategory.jsx'))
@@ -30,6 +34,9 @@ const About = lazy(() => import('./pages/About.jsx'))
 
 export default function App() {
   const { settings } = useSettings()
+  // Keep the global player pointed at the chosen reciter for the whole session,
+  // not just while a reader screen happens to be mounted.
+  useReciterSync(settings.reciter)
   if (!settings.onboarded) return <Onboarding />
 
   return (
@@ -40,8 +47,11 @@ export default function App() {
 
           <Route path="/quran" element={<QuranIndex />} />
           <Route path="/quran/:n" element={<SurahReader />} />
+          <Route path="/mushaf" element={<Mushaf />} />
+          <Route path="/mushaf/:page" element={<Mushaf />} />
 
           <Route path="/hadith" element={<HadithIndex />} />
+          <Route path="/hadith/lookup" element={<HadithLookup />} />
           <Route path="/hadith/:id" element={<HadithCollection />} />
           <Route path="/hadith/:id/:book" element={<HadithBook />} />
 
@@ -66,6 +76,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <Player />
       <TabBar />
     </div>
   )

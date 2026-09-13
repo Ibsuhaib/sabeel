@@ -1,0 +1,324 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { pageAyahs, quranMeta } from '../lib/data.js'
+import { store } from '../lib/store.js'
+import { useSettings } from '../lib/settings.jsx'
+import { player } from '../lib/audio.js'
+import { usePlayer } from '../lib/reciters.js'
+import { toArabicNumber } from '../lib/format.js'
+import { Loading, Sheet, IconButton, Button } from '../components/ui.jsx'
+import Icon from '../components/Icon.jsx'
+
+const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
+const TOTAL_PAGES = 604
+
+// The muṣḥaf page. One page of the 604-page Madani layout at a time, text
+// flowing and justified the way it does on paper — not an endless scroll.
+// Turning a page moves right-to-left, as it does in the book.
+export default function Mushaf() {
+  const { page: pageParam } = useParams()
+  const page = Math.min(TOTAL_PAGES, Math.max(1, Number(pageParam) || 1))
+  const nav = useNavigate()
+  const { settings, set } = useSettings()
+
+  const [data, setData] = useState(null)
+  const [meta, setMeta] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [sheet, setSheet] = useState(null)
+  const [bookmarks, setBookmarks] = useState([])
+
+  const audio = usePlayer()
+  const touch = useRef(null)
+
+  useEffect(() => { quranMeta().then(setMeta) }, [])
+  useEffect(() => {
+    setData(null)
+    setSelected(null)
+    pageAyahs(page).then(setData)
+    window.scrollTo(0, 0)
+  }, [page])
+  useEffect(() => { store.bookmarksQuran().then(setBookmarks) }, [])
+
+  const go = useCallback(delta => {
+    const next = page + delta
+    if (next >= 1 && next <= TOTAL_PAGES) nav(`/mushaf/${next}`)
+  }, [page, nav])
+
+  // Remember the page as the reading position too, so Continue Reading works
+  // whichever mode you were last in.
+  useEffect(() => {
+    if (data?.ayahs?.length) {
+      const first = data.ayahs[0]
+      store.setLastRead({ surah: first.surah, ayah: first.v, page })
+    }
+  }, [data, page])
+
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'ArrowLeft') go(1)
+      if (e.key === 'ArrowRight') go(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [go])
+
+  const bookmarked = useMemo(() => new Set(bookmarks.map(b => b.id)), [bookmarks])
+
+  if (!data || !meta) return <Loading label="Opening the muṣḥaf" />
+
+  const { page: info, ayahs } = data
+  const surahsOnPage = [...new Set(ayahs.map(a => a.surah))]
+  const title = surahsOnPage.map(n => meta.surahs.find(s => s.n === n)?.en).join(' · ')
+
+  function onTouchStart(e) { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
+  function onTouchEnd(e) {
+    if (!touch.current) return
+    const dx = e.changedTouches[0].clientX - touch.current.x
+    const dy = e.changedTouches[0].clientY - touch.current.y
+    touch.current = null
+    if (Math.abs(dx) < 60 || Math.abs(dy) > 70) return
+    // RTL: swiping left goes forward through the muṣḥaf.
+    go(dx < 0 ? 1 : -1)
+  }
+
+  return (
+    <div className="min-h-full pb-32" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <header className="sticky top-0 z-30 safe-t bg-bg/92 backdrop-blur-md border-b border-line">
+        <div className="flex items-center gap-1 px-2 h-14">
+          <IconButton name="back" label="Back to surah list" onClick={() => nav('/quran')} size={22} />
+          <button onClick={() => setSheet('jump')} className="tap min-w-0 flex-1 text-center px-2">
+            <span className="block text-[15px] font-semibold truncate">{title}</span>
+            <span className="block text-[11px] text-muted">Page {info.p} · Juz {info.juz}</span>
+          </button>
+          <IconButton
+            name="quran" label="Switch to scrolling view"
+            onClick={() => { set({ readerMode: 'scroll' }); nav(`/quran/${ayahs[0].surah}?ayah=${ayahs[0].v}`) }}
+          />
+          <IconButton name="settings" label="Reading settings" onClick={() => setSheet('settings')} />
+        </div>
+      </header>
+
+      <div className="px-4 pt-5">
+        <div className="border border-gold/25 rounded-2xl px-4 py-6 bg-surf/40">
+          <p className="ar" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
+            {ayahs.map((a, i) => {
+              const startsSurah = a.v === 1
+              const isPlaying = audio.playing && audio.surah === a.surah && audio.ayah === a.v
+              const id = `${a.surah}:${a.v}`
+              return (
+                <span key={id}>
+                  {startsSurah && (
+                    <span className="block my-5" style={{ textAlign: 'center' }}>
+                      <span className="block border-y border-gold/30 py-2 text-brand" style={{ fontSize: '0.72em' }}>
+                        {meta.surahs.find(s => s.n === a.surah)?.name}
+                      </span>
+                      {a.surah !== 1 && a.surah !== 9 && (
+                        <span className="block mt-4" style={{ fontSize: '0.86em' }}>{BISMILLAH}</span>
+                      )}
+                    </span>
+                  )}
+                  <span
+                    onClick={() => setSelected(selected === id ? null : id)}
+                    className={`cursor-pointer transition-colors ${
+                      isPlaying ? 'text-brand' : selected === id ? 'bg-brand/10 rounded' : ''
+                    }`}
+                  >
+                    {a.ar}
+                    <span className={`ayah-mark ${bookmarked.has(id) ? 'bg-gold/20' : ''}`}>
+                      {toArabicNumber(a.v)}
+                    </span>
+                  </span>
+                  {a.sajdah && (
+                    <span className="text-gold" style={{ fontSize: '0.5em' }} title="Place of prostration"> ۩ </span>
+                  )}
+                  {i < ayahs.length - 1 ? ' ' : ''}
+                </span>
+              )
+            })}
+          </p>
+
+          <div className="mt-6 pt-4 border-t border-gold/20 flex items-center justify-center gap-3">
+            <span className="text-[11px] text-muted tabular-nums">{info.p}</span>
+          </div>
+        </div>
+      </div>
+
+      {selected && (
+        <AyahBar
+          id={selected} ayahs={ayahs} meta={meta}
+          bookmarked={bookmarked.has(selected)}
+          onClose={() => setSelected(null)}
+          onPlay={a => {
+            const surahInfo = meta.surahs.find(s => s.n === a.surah)
+            player.play(a.surah, a.v, surahInfo?.ayahs)
+          }}
+          onBookmark={async a => setBookmarks(await store.toggleQuranBookmark(a.surah, a.v, (a.en || '').slice(0, 120)))}
+          translation={settings.translation}
+        />
+      )}
+
+      <nav className="flex items-center justify-between gap-3 px-4 py-6">
+        <Button variant="soft" size="sm" onClick={() => go(-1)} disabled={page <= 1}>
+          <Icon name="forward" size={14} />Previous
+        </Button>
+        <button onClick={() => setSheet('jump')} className="tap text-xs text-muted tabular-nums px-3">
+          {page} / {TOTAL_PAGES}
+        </button>
+        <Button variant="soft" size="sm" onClick={() => go(1)} disabled={page >= TOTAL_PAGES}>
+          Next<Icon name="back" size={14} />
+        </Button>
+      </nav>
+
+      <p className="text-[11px] text-muted/60 text-center px-10 pb-4">
+        Swipe left for the next page, right to go back.
+      </p>
+
+      <JumpSheet
+        open={sheet === 'jump'} onClose={() => setSheet(null)}
+        meta={meta} current={page} onJump={p => { nav(`/mushaf/${p}`); setSheet(null) }}
+      />
+      <MushafSettings open={sheet === 'settings'} onClose={() => setSheet(null)} settings={settings} set={set} />
+    </div>
+  )
+}
+
+function AyahBar({ id, ayahs, meta, bookmarked, onClose, onPlay, onBookmark, translation }) {
+  const [sn, av] = id.split(':').map(Number)
+  const a = ayahs.find(x => x.surah === sn && x.v === av)
+  if (!a) return null
+  const surahName = meta.surahs.find(s => s.n === sn)?.en
+  const text = translation === 'e2' ? a.e2 : a.en
+
+  return (
+    <div className="px-4 mt-3">
+      <div className="bg-surf border border-line rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[11px] text-brand font-medium flex-1">{surahName} {sn}:{av}</span>
+          <button onClick={onClose} className="tap text-muted p-1"><Icon name="close" size={14} /></button>
+        </div>
+        <p className="translation text-ink/85">{text}</p>
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-line/60">
+          <Act icon="play" label="Play" onClick={() => onPlay(a)} />
+          <Act icon="bookmark" label={bookmarked ? 'Saved' : 'Save'} active={bookmarked} onClick={() => onBookmark(a)} />
+          <Act icon="quran" label="Open in reader" to={`/quran/${sn}?ayah=${av}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Act({ icon, label, onClick, to, active }) {
+  const cls = `tap flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] ${active ? 'text-brand bg-brand/10' : 'text-muted'}`
+  if (to) return <Link to={to} className={cls}><Icon name={icon} size={16} />{label}</Link>
+  return <button onClick={onClick} className={cls}><Icon name={icon} size={16} fill={active && icon === 'bookmark' ? 'currentColor' : 'none'} />{label}</button>
+}
+
+function JumpSheet({ open, onClose, meta, current, onJump }) {
+  const [tab, setTab] = useState('surah')
+  const [pageInput, setPageInput] = useState(String(current))
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Go to">
+      <div className="flex gap-2 px-4 py-3 border-b border-line">
+        {[['surah', 'Surah'], ['juz', 'Juz'], ['page', 'Page']].map(([id, label]) => (
+          <button
+            key={id} onClick={() => setTab(id)}
+            className={`tap px-3.5 py-1.5 rounded-full text-xs border ${
+              tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
+            }`}
+          >{label}</button>
+        ))}
+      </div>
+
+      {tab === 'page' && (
+        <div className="p-4">
+          <label className="block text-[11px] text-muted mb-1.5">Page number (1–604)</label>
+          <div className="flex gap-2">
+            <input
+              type="number" min={1} max={604} value={pageInput}
+              onChange={e => setPageInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && onJump(Math.min(604, Math.max(1, Number(pageInput) || 1)))}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-bg border border-line text-sm tabular-nums outline-none focus:border-brand"
+            />
+            <Button onClick={() => onJump(Math.min(604, Math.max(1, Number(pageInput) || 1)))}>Go</Button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'surah' && (
+        <ul className="divide-y divide-line">
+          {meta.surahs.map(s => (
+            <li key={s.n}>
+              <button
+                onClick={() => onJump(s.page)}
+                className="tap w-full flex items-center gap-3 px-4 py-2.5 text-left"
+              >
+                <span className="w-7 text-xs tabular-nums text-muted">{s.n}</span>
+                <span className="flex-1 text-sm truncate">{s.en}</span>
+                <span className="text-[11px] text-muted tabular-nums">p. {s.page}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {tab === 'juz' && (
+        <ul className="divide-y divide-line">
+          {Array.from({ length: 30 }, (_, i) => i + 1).map(j => {
+            const p = meta.pages.find(x => x.juz === j)
+            return (
+              <li key={j}>
+                <button onClick={() => onJump(p?.p || 1)} className="tap w-full flex items-center gap-3 px-4 py-2.5 text-left">
+                  <span className="flex-1 text-sm">Juz {j}</span>
+                  <span className="text-[11px] text-muted tabular-nums">p. {p?.p}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Sheet>
+  )
+}
+
+function MushafSettings({ open, onClose, settings, set }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Muṣḥaf settings">
+      <div className="py-2">
+        <div className="px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Arabic size</div>
+          <input
+            type="range" min={20} max={54} value={settings.arabicSize}
+            onChange={e => set({ arabicSize: Number(e.target.value) })}
+            className="w-full accent-[rgb(var(--c-brand))]"
+          />
+        </div>
+        <div className="px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Line spacing</div>
+          <input
+            type="range" min={1.6} max={3.4} step={0.1} value={settings.arabicLeading}
+            onChange={e => set({ arabicLeading: Number(e.target.value) })}
+            className="w-full accent-[rgb(var(--c-brand))]"
+          />
+        </div>
+        <div className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Arabic font</div>
+        <div className="px-4 space-y-2 pb-4">
+          {['Amiri Quran', 'Scheherazade New', 'Noto Naskh Arabic'].map(f => (
+            <button
+              key={f} onClick={() => set({ arabicFont: f })}
+              className={`tap w-full text-left px-3 py-2.5 rounded-xl border text-sm ${
+                settings.arabicFont === f ? 'border-brand bg-brand/10' : 'border-line bg-bg text-muted'
+              }`}
+            >{f}</button>
+          ))}
+        </div>
+        <p className="px-6 pb-4 text-[11px] text-muted/80 leading-relaxed">
+          Page mode shows the Quran in the 604-page Madani layout, one page at a time.
+          Line breaks follow the text flow at your chosen size rather than the printed
+          muṣḥaf's exact line endings — matching those needs the page-specific KFGQPC
+          fonts, which are not yet bundled.
+        </p>
+      </div>
+    </Sheet>
+  )
+}

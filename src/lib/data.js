@@ -31,6 +31,30 @@ export async function ayahRange(fromSurah, fromAyah, count) {
   return ayahs.filter(a => a.v >= fromAyah).slice(0, count)
 }
 
+// Muṣḥaf page mode. A page can span two surahs, so it is assembled from the
+// page index in meta.json rather than from any single surah file.
+export async function pageAyahs(pageNumber) {
+  const meta = await quranMeta()
+  const page = meta.pages.find(p => p.p === Number(pageNumber))
+  if (!page) return null
+
+  const out = []
+  for (let n = page.from.s; n <= page.to.s; n++) {
+    const { ayahs } = await surah(n)
+    const info = meta.surahs.find(s => s.n === n)
+    for (const a of ayahs) {
+      if (a.p !== page.p) continue
+      out.push({ ...a, surah: n, surahName: info.name, surahEn: info.en })
+    }
+  }
+  return { page, ayahs: out, meta }
+}
+
+export async function pageOf(surahNumber, ayahNumber) {
+  const { ayahs } = await surah(surahNumber)
+  return ayahs.find(a => a.v === Number(ayahNumber))?.p ?? null
+}
+
 export async function juzSurahs(juz) {
   const meta = await quranMeta()
   const out = []
@@ -63,6 +87,10 @@ export async function findHadith(collection, n) {
   }
   return null
 }
+
+/* -------------------------------- Reciters -------------------------------- */
+
+export const reciterCatalogue = () => load('reciters.json')
 
 /* ----------------------------------- Dua ---------------------------------- */
 

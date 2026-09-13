@@ -1,48 +1,88 @@
-// Recitation streams straight from EveryAyah — we never host a gigabyte of mp3.
-// The service worker caches each file on first play, so a surah you have
-// listened to once is available offline afterwards.
-import { ayahAudioId } from './format.js'
+// One player for the whole app, so recitation keeps going while you browse.
+//
+// Two playback modes, and the difference is honest in the UI:
+//   'ayah'  — EveryAyah, one file per ayah. Ayah controls, A→B range and
+//             per-ayah repeat all work because each ayah is its own file.
+//   'surah' — mp3quran, one file per surah. More imams (most of the current
+//             Haramain), but a single file cannot be driven ayah by ayah.
+//
+// Nothing is hosted by us. Files stream and the service worker caches what has
+// actually been played.
 
-const CDN = 'https://everyayah.com/data'
+const EVERY_AYAH = 'https://everyayah.com/data'
 
-// Every folder below was verified to resolve before shipping.
-export const RECITERS = [
-  { id: 'Alafasy_128kbps', name: 'Mishary Rashid Alafasy', style: 'Murattal' },
-  { id: 'Abdul_Basit_Murattal_192kbps', name: 'Abdul Basit Abdus Samad', style: 'Murattal' },
-  { id: 'Husary_128kbps', name: 'Mahmoud Khalil al-Husary', style: 'Murattal' },
-  { id: 'Minshawy_Murattal_128kbps', name: 'Muhammad Siddiq al-Minshawi', style: 'Murattal' },
-  { id: 'Abdurrahmaan_As-Sudais_192kbps', name: 'Abdurrahman as-Sudais', style: 'Murattal' },
-  { id: 'Saood_ash-Shuraym_128kbps', name: 'Saud ash-Shuraim', style: 'Murattal' },
-  { id: 'Hudhaify_128kbps', name: 'Ali al-Hudhaify', style: 'Murattal' },
-  { id: 'Ahmed_ibn_Ali_al_Ajamy_128kbps', name: 'Ahmed ibn Ali al-Ajamy', style: 'Murattal' },
-  { id: 'Muhammad_Ayyoub_128kbps', name: 'Muhammad Ayyoub', style: 'Murattal' },
-  { id: 'MaherAlMuaiqly128kbps', name: 'Maher al-Muaiqly', style: 'Murattal' },
-  { id: 'Nasser_Alqatami_128kbps', name: 'Nasser al-Qatami', style: 'Murattal' },
-  { id: 'Yasser_Ad-Dussary_128kbps', name: 'Yasser ad-Dussary', style: 'Murattal' },
-  { id: 'Mohammad_al_Tablaway_128kbps', name: 'Mohammad al-Tablaway', style: 'Murattal' },
-  { id: 'Ghamadi_40kbps', name: 'Saad al-Ghamdi', style: 'Murattal' },
-  { id: 'Menshawi_16kbps', name: 'al-Minshawi (light)', style: 'Murattal, low bandwidth' }
-]
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
+export const REPEATS = [1, 2, 3, 5, 7, 10, Infinity]
 
-export const ayahUrl = (reciter, surah, ayah) => `${CDN}/${reciter}/${ayahAudioId(surah, ayah)}.mp3`
+export const ayahFileId = (surah, ayah) =>
+  `${String(surah).padStart(3, '0')}${String(ayah).padStart(3, '0')}`
 
-export const SPEEDS = [0.75, 1, 1.25, 1.5, 2]
+export function ayahUrl(reciter, surah, ayah) {
+  return `${EVERY_AYAH}/${reciter.id}/${ayahFileId(surah, ayah)}.mp3`
+}
 
-// A tiny state machine over one <audio> element. Handles continuous playback,
-// ayah repeat and A→B range repeat without pulling in a media library.
-export function createPlayer() {
-  const el = new Audio()
+export function surahUrl(reciter, surah) {
+  return `${reciter.server}/${String(surah).padStart(3, '0')}.mp3`
+}
+
+const initial = {
+  reciter: null,
+  surah: null,
+  ayah: null,
+  lastAyah: null,      // ayah count of the surah being played
+  playing: false,
+  loading: false,
+  error: null,
+  time: 0,
+  duration: 0,
+  speed: 1,
+  repeat: 1,           // repeats of the CURRENT ayah before moving on
+  played: 0,
+  range: null,         // { from, to } — loop this span of ayahs
+  autoAdvance: true    // continue into the next ayah when one finishes
+}
+
+let state = { ...initial }
+let el = null
+const listeners = new Set()
+
+function emit() {
+  const snapshot = { ...state }
+  listeners.forEach(fn => fn(snapshot))
+}
+
+function audio() {
+  if (el) return el
+  el = new Audio()
   el.preload = 'auto'
 
-  let state = {
-    playing: false, surah: null, ayah: null, reciter: null,
-    repeatAyah: 1, played: 0, range: null, speed: 1, lastAyah: null
-  }
-  const listeners = new Set()
-  const emit = () => listeners.forEach(fn => fn({ ...state }))
+  el.addEventListener('play', () => { state.playing = true; state.error = null; emit() })
+  el.addEventListener('pause', () => { state.playing = false; emit() })
+  el.addEventListener('waiting', () => { state.loading = true; emit() })
+  el.addEventListener('playing', () => { state.loading = false; emit() })
+  el.addEventListener('loadedmetadata', () => {
+    state.duration = el.duration || 0
+    state.loading = false
+    emit()
+  })
+  el.addEventListener('timeupdate', () => {
+    state.time = el.currentTime || 0
+    emit()
+  })
+  el.addEventListener('error', () => {
+    state.loading = false
+    state.playing = false
+    state.error = 'Could not load this recitation. Check your connection, or try another reciter.'
+    emit()
+  })
+  el.addEventListener('ended', onEnded)
+  return el
+}
 
-  el.addEventListener('ended', () => {
-    if (state.played + 1 < state.repeatAyah) {
+function onEnded() {
+  if (state.reciter?.mode === 'surah') {
+    // A whole surah just finished. Repeat it, or stop.
+    if (state.played + 1 < state.repeat) {
       state.played++
       el.currentTime = 0
       el.play().catch(() => {})
@@ -50,39 +90,153 @@ export function createPlayer() {
       return
     }
     state.played = 0
-    const next = state.ayah + 1
-    const endOfRange = state.range && next > state.range.to
-    const endOfSurah = state.lastAyah && next > state.lastAyah
-
-    if (endOfRange) return play(state.surah, state.range.from)
-    if (endOfSurah) { state.playing = false; emit(); return }
-    play(state.surah, next)
-  })
-
-  el.addEventListener('play', () => { state.playing = true; emit() })
-  el.addEventListener('pause', () => { state.playing = false; emit() })
-  el.addEventListener('error', () => { state.playing = false; emit() })
-
-  function play(surah, ayah) {
-    state.surah = surah
-    state.ayah = ayah
-    el.src = ayahUrl(state.reciter, surah, ayah)
-    el.playbackRate = state.speed
-    el.play().catch(() => { state.playing = false; emit() })
+    state.playing = false
     emit()
+    return
   }
 
-  return {
-    subscribe(fn) { listeners.add(fn); fn({ ...state }); return () => listeners.delete(fn) },
-    configure(patch) { Object.assign(state, patch); if (patch.speed) el.playbackRate = patch.speed; emit() },
-    play,
-    toggle(surah, ayah) {
-      if (state.playing && state.surah === surah && state.ayah === ayah) { el.pause(); return }
-      if (!state.playing && state.surah === surah && state.ayah === ayah && el.src) { el.play().catch(() => {}); return }
-      play(surah, ayah)
-    },
-    pause() { el.pause() },
-    stop() { el.pause(); el.removeAttribute('src'); state.playing = false; state.ayah = null; emit() },
-    get state() { return { ...state } }
+  // Per-ayah: repeat this ayah first.
+  if (state.played + 1 < state.repeat) {
+    state.played++
+    el.currentTime = 0
+    el.play().catch(() => {})
+    emit()
+    return
+  }
+  state.played = 0
+
+  if (!state.autoAdvance) { state.playing = false; emit(); return }
+
+  const next = state.ayah + 1
+  if (state.range && next > state.range.to) return load(state.surah, state.range.from)
+  if (state.lastAyah && next > state.lastAyah) { state.playing = false; emit(); return }
+  load(state.surah, next)
+}
+
+function load(surah, ayah, { autoplay = true } = {}) {
+  // Every transport control routes through here, so this is the one place that
+  // needs to know a reciter has actually been chosen. Without it, pressing next
+  // before the catalogue has loaded throws.
+  if (!state.reciter || !surah) return
+  const a = audio()
+  state.surah = surah
+  state.ayah = ayah
+  state.time = 0
+  state.duration = 0
+  state.loading = true
+  state.error = null
+
+  a.src = state.reciter.mode === 'surah'
+    ? surahUrl(state.reciter, surah)
+    : ayahUrl(state.reciter, surah, ayah)
+  a.playbackRate = state.speed
+
+  if (autoplay) a.play().catch(() => { state.playing = false; state.loading = false; emit() })
+  emit()
+}
+
+export const player = {
+  subscribe(fn) {
+    listeners.add(fn)
+    fn({ ...state })
+    return () => listeners.delete(fn)
+  },
+
+  get state() { return { ...state } },
+
+  setReciter(reciter) {
+    if (!reciter) return
+    const wasPlaying = state.playing
+    const { surah, ayah } = state
+    state.reciter = reciter
+    state.played = 0
+    // Switching between modes invalidates any ayah range.
+    if (reciter.mode === 'surah') state.range = null
+    emit()
+    if (surah && wasPlaying) load(surah, ayah || 1)
+    else if (surah) load(surah, ayah || 1, { autoplay: false })
+  },
+
+  setSurahLength(n) { state.lastAyah = n },
+
+  play(surah, ayah = 1, lastAyah) {
+    if (!state.reciter) return
+    if (lastAyah) state.lastAyah = lastAyah
+    state.played = 0
+    load(surah, ayah)
+  },
+
+  toggle(surah, ayah, lastAyah) {
+    if (!state.reciter) return
+    const same = state.surah === surah && (state.reciter.mode === 'surah' || state.ayah === ayah)
+    if (same && state.playing) { audio().pause(); return }
+    if (same && el?.src) { audio().play().catch(() => {}); return }
+    this.play(surah, ayah, lastAyah)
+  },
+
+  pause() { el?.pause() },
+  resume() { el?.play().catch(() => {}) },
+
+  playPause() {
+    if (!el?.src) return
+    if (state.playing) el.pause()
+    else el.play().catch(() => {})
+  },
+
+  next() {
+    if (!state.reciter || !state.surah) return
+    if (state.reciter.mode === 'surah') { this.seek(Math.min(state.duration, state.time + 30)); return }
+    const n = (state.ayah || 0) + 1
+    if (state.lastAyah && n > state.lastAyah) return
+    state.played = 0
+    load(state.surah, n)
+  },
+
+  previous() {
+    if (!state.reciter || !state.surah) return
+    if (state.reciter.mode === 'surah') { this.seek(Math.max(0, state.time - 30)); return }
+    // Mirror every audio player ever: restart the ayah if you are past the start.
+    if (state.time > 2.5) { this.seek(0); return }
+    const p = state.ayah - 1
+    if (p < 1) { this.seek(0); return }
+    state.played = 0
+    load(state.surah, p)
+  },
+
+  seek(seconds) {
+    if (!el) return
+    el.currentTime = Math.max(0, Math.min(seconds, el.duration || seconds))
+    state.time = el.currentTime
+    emit()
+  },
+
+  setSpeed(speed) {
+    state.speed = speed
+    if (el) el.playbackRate = speed
+    emit()
+  },
+
+  setRepeat(repeat) { state.repeat = repeat; state.played = 0; emit() },
+  setAutoAdvance(on) { state.autoAdvance = on; emit() },
+
+  // A→B: loop a span of ayahs. Starts playing from the beginning of the span.
+  setRange(from, to) {
+    if (from == null) { state.range = null; emit(); return }
+    if (state.reciter?.mode === 'surah') return
+    const lo = Math.min(from, to)
+    const hi = Math.max(from, to)
+    state.range = { from: lo, to: hi }
+    state.played = 0
+    emit()
+    if (state.surah) load(state.surah, lo)
+  },
+
+  clearRange() { state.range = null; emit() },
+
+  stop() {
+    el?.pause()
+    if (el) el.removeAttribute('src')
+    state = { ...initial, reciter: state.reciter, speed: state.speed }
+    emit()
   }
 }

@@ -18,7 +18,8 @@ const SOURCES = [
   { what: 'Dua and adhkar', who: 'fitrahive/dua-dhikr', note: 'Arabic, transliteration, English, with source attribution' },
   { what: '99 Names', who: 'Aladhan asma al-husna', note: 'Arabic, transliteration, English meaning' },
   { what: 'Prayer times', who: 'adhan-js by Batoul Apps', note: 'MIT — computed on device, no network' },
-  { what: 'Recitation', who: 'EveryAyah.com', note: '15 reciters, streamed and cached on play' },
+  { what: 'Recitation, per ayah', who: 'EveryAyah.com', note: '39 reciters — ayah repeat and range looping work with these' },
+  { what: 'Recitation, full surah', who: 'mp3quran.net', note: 'Imams whose muṣḥaf is only published surah by surah' },
   { what: 'Arabic fonts', who: 'Amiri Quran, Scheherazade New, Noto Naskh Arabic', note: 'SIL Open Font License' }
 ]
 
@@ -117,6 +118,17 @@ export default function About() {
             the Root Atlas and coverage tracking, tajweed colouring, hifz spaced repetition,
             masjid iqamah times, and languages beyond English. These are planned, not shipped.
             Nothing in the app pretends otherwise.
+          </p>
+          <p className="text-[13px] text-muted leading-relaxed mt-3">
+            <strong className="text-ink">Muṣḥaf page mode</strong> uses the real 604-page Madani
+            pagination — the right ayahs on the right page — but line breaks follow the text flow
+            at your chosen size rather than the printed muṣḥaf's exact line endings. Matching those
+            needs the page-specific KFGQPC fonts, which are not yet bundled.
+          </p>
+          <p className="text-[13px] text-muted leading-relaxed mt-3">
+            <strong className="text-ink">There is no Masjid al-Aqsa reciter.</strong> No complete
+            Quran recorded by an imam of al-Aqsa exists in the open recitation archives. Rather than
+            label someone else as an Aqsa reciter, that space is left empty.
           </p>
         </Card>
       </Section>

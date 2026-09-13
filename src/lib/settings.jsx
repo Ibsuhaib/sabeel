@@ -11,6 +11,7 @@ export const DEFAULTS = {
   dyslexicFont: false,
   showTranslation: true,
   showTransliteration: false,
+  readerMode: 'scroll',          // scroll | mushaf (604-page Madani layout)
   translation: 'en',             // en = Saheeh International, e2 = Clear Quran
   reciter: 'Alafasy_128kbps',
   method: 'MuslimWorldLeague',

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSettings } from '../lib/settings.jsx'
 import { METHODS } from '../lib/prayer.js'
-import { RECITERS } from '../lib/audio.js'
+import { loadReciters, groupReciters } from '../lib/reciters.js'
 import { Button, Choice } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 
@@ -119,20 +119,8 @@ export default function Onboarding() {
         )}
 
         {s === 'reciter' && (
-          <Step title="Choose a reciter" body="Recitation streams on demand and is cached as you listen, so surahs you have played work offline.">
-            <div className="px-4 max-h-72 overflow-y-auto space-y-2">
-              {RECITERS.slice(0, 8).map(r => (
-                <button
-                  key={r.id}
-                  onClick={() => set({ reciter: r.id })}
-                  className={`tap w-full text-left px-3 py-2.5 rounded-xl border text-sm ${
-                    settings.reciter === r.id ? 'border-brand bg-brand/10' : 'border-line bg-surf text-muted'
-                  }`}
-                >
-                  {r.name}
-                </button>
-              ))}
-            </div>
+          <Step title="Choose a reciter" body="Recitation streams on demand and is cached as you listen, so surahs you have played work offline. You can change this any time.">
+            <ReciterStep value={settings.reciter} onChange={id => set({ reciter: id })} />
           </Step>
         )}
       </div>
@@ -147,6 +135,40 @@ export default function Onboarding() {
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+// Haramain imams first — it is what most people are looking for on this screen.
+function ReciterStep({ value, onChange }) {
+  const [catalogue, setCatalogue] = useState(null)
+  useEffect(() => { loadReciters().then(setCatalogue) }, [])
+
+  if (!catalogue) return <p className="px-4 text-sm text-muted">Loading reciters…</p>
+
+  return (
+    <div className="px-4 max-h-80 overflow-y-auto">
+      {groupReciters(catalogue).map(g => (
+        <section key={g.id} className="mb-4">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">{g.label}</h4>
+          <div className="space-y-2">
+            {g.reciters.slice(0, g.id === 'other' ? 10 : 99).map(r => (
+              <button
+                key={r.id}
+                onClick={() => onChange(r.id)}
+                className={`tap w-full text-left px-3 py-2.5 rounded-xl border text-sm flex items-center gap-2 ${
+                  value === r.id ? 'border-brand bg-brand/10' : 'border-line bg-surf text-muted'
+                }`}
+              >
+                <span className="flex-1 min-w-0 truncate">{r.name}</span>
+                {r.mode === 'surah' && (
+                  <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border border-line opacity-70">full surah</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

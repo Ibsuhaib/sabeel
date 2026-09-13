@@ -26,8 +26,9 @@ A pull request that breaks any of the six will not be merged, however good the f
 
 | Area | Shipped |
 |---|---|
-| **Quran** | Full Uthmani (Hafs) text · Saheeh International + The Clear Quran · transliteration · 15 reciters with continuous playback, per-ayah repeat and speed control · bookmarks, private notes, last-read resume · surah and juz navigation · 3 Arabic faces, adjustable size and line height |
-| **Hadith** | 36,512 narrations across 10 collections — the Kutub as-Sittah plus Muwatta Malik, 40 Nawawi, 40 Qudsi, 40 Shah Waliullah · Arabic + English · **grading with the grader named on every narration that has one** · full provenance · per-collection offline download |
+| **Quran** | Full Uthmani (Hafs) text · Saheeh International + The Clear Quran · transliteration · **two reading modes: scrolling, or the 604-page Madani muṣḥaf** · bookmarks, private notes, last-read resume · surah, juz and page navigation · sajdah markers · 3 Arabic faces, adjustable size and line height |
+| **Recitation** | **42 reciters, including 8 imams of Masjid al-Haram and 4 of Masjid an-Nabawi** · persistent player that keeps going while you browse · pause, previous/next ayah, seek · **A→B ayah-range looping** · repeat 2×–∞ · speed 0.5×–2× · switch reciter mid-playback without losing your place |
+| **Hadith** | 36,512 narrations across 10 collections — the Kutub as-Sittah plus Muwatta Malik, 40 Nawawi, 40 Qudsi, 40 Shah Waliullah · Arabic + English · **grading with the grader named on every narration that has one** · full provenance · **look up any narration by reference (“bukhari 1302”)** · per-collection offline download |
 | **Prayer** | On-device calculation (adhan-js), 13 methods, Hanafi/Shafi'i Asr, 3 high-latitude rules, per-prayer offsets · **"Why these times"** sheet showing every parameter used · next-prayer countdown · sunnah windows (duha, last third) · prayer tracker with heatmap, streaks and qada count · monthly printable timetable · qibla compass |
 | **Dua** | 97 supplications across 5 categories, each with Arabic, transliteration, English **and its source** · morning/evening adhkar with per-dua counters · 99 Names of Allah · tasbih with haptics |
 | **Tools** | Unified search across Quran + hadith + dua in one box · Hijri calendar with fasts and events · zakat calculator with both nisab bases · full data export/import |
@@ -38,6 +39,16 @@ A pull request that breaks any of the six will not be merged, however good the f
 Tafsir · word-by-word morphology · the Root Atlas and Coverage Engine · tajweed colouring ·
 hifz spaced repetition · masjid iqamah times · languages beyond English · adhan notifications.
 These are planned. Nothing in the app pretends they exist.
+
+Two honest limits worth stating plainly:
+
+- **Muṣḥaf page mode** shows the real 604-page Madani pagination — the right ayahs on the right
+  page — but line breaks follow the text flow at your chosen font size, not the printed muṣḥaf's
+  exact line endings. Matching those requires the page-specific KFGQPC (QCF) fonts, one per page,
+  which are not yet bundled.
+- **No Masjid al-Aqsa reciter.** Neither EveryAyah nor mp3quran carries a complete Quran recorded
+  by an imam of al-Aqsa. Rather than label someone else as an Aqsa reciter, the app leaves that
+  empty and says so on the reciter screen.
 
 ---
 

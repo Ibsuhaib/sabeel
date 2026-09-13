@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSettings } from '../lib/settings.jsx'
 import { METHODS, HIGH_LAT_RULES, POLAR_RULES, PRAYERS } from '../lib/prayer.js'
-import { RECITERS } from '../lib/audio.js'
+import { loadReciters, findReciter } from '../lib/reciters.js'
+import { ReciterList } from '../components/Player.jsx'
 import { store } from '../lib/store.js'
 import { hijri } from '../lib/hijri.js'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Sheet, Stepper } from '../components/ui.jsx'
@@ -12,6 +13,9 @@ export default function Settings() {
   const [sheet, setSheet] = useState(null)
   const [msg, setMsg] = useState(null)
   const fileRef = useRef(null)
+  const [catalogue, setCatalogue] = useState(null)
+
+  useEffect(() => { loadReciters().then(setCatalogue) }, [])
 
   async function exportData() {
     const payload = await store.exportAll()
@@ -156,7 +160,7 @@ export default function Settings() {
             <span className="flex-1 min-w-0">
               <span className="block text-sm">Reciter</span>
               <span className="block text-[11px] text-muted mt-0.5 truncate">
-                {RECITERS.find(r => r.id === settings.reciter)?.name}
+                {catalogue ? findReciter(catalogue, settings.reciter).name : 'Loading…'}
               </span>
             </span>
             <Icon name="forward" size={16} className="text-muted" />
@@ -219,11 +223,12 @@ export default function Settings() {
         options={POLAR_RULES} value={settings.polarCircleResolution}
         onChange={v => { set({ polarCircleResolution: v }); setSheet(null) }}
       />
-      <SheetPicker
-        open={sheet === 'reciter'} onClose={() => setSheet(null)} title="Reciter"
-        options={RECITERS.map(r => ({ id: r.id, label: r.name, note: r.style }))}
-        value={settings.reciter} onChange={v => { set({ reciter: v }); setSheet(null) }}
-      />
+      <Sheet open={sheet === 'reciter'} onClose={() => setSheet(null)} title="Reciter">
+        <ReciterList
+          catalogue={catalogue} currentId={settings.reciter}
+          onSelect={v => { set({ reciter: v }); setSheet(null) }}
+        />
+      </Sheet>
     </Screen>
   )
 }

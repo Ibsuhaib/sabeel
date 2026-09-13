@@ -24,6 +24,8 @@ export default function More() {
           <Row icon="calendar" title="Hijri calendar" subtitle="Islamic dates, fasts and events" to="/calendar" />
           <Row icon="calc" title="Zakat calculator" subtitle="Nisab, assets and what is due" to="/zakat" />
           <Row icon="search" title="Unified search" subtitle="Quran, hadith and dua in one box" to="/search" />
+          <Row icon="book" title="Muṣḥaf page view" subtitle="Read the 604-page Madani layout" to="/mushaf/1" />
+          <Row icon="hadith" title="Hadith by reference" subtitle="Look up a narration by its number" to="/hadith/lookup" />
           <Row icon="star" title="99 Names of Allah" subtitle="Asma ul-Husna with meanings" to="/dua/names" />
         </Card>
       </Section>

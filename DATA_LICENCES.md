@@ -71,7 +71,8 @@ Sunan an-Nasa'i, Sunan Ibn Majah, Muwatta Malik, 40 Hadith Nawawi, 40 Hadith Qud
 
 | Item | Source | Status | Notes |
 |---|---|---|---|
-| Per-ayah recitation, 15 reciters | EveryAyah.com | ⚠️ | Streamed directly from EveryAyah; **we do not host, rehost or bundle any audio.** Files are cached on the user's own device by the service worker after they play them, the same as any browser cache. Action: if the app ever bundles audio for offline packs, that needs explicit permission first. |
+| Per-ayah recitation, 39 reciters | EveryAyah.com | ⚠️ | Streamed directly from EveryAyah; **we do not host, rehost or bundle any audio.** Files are cached on the user's own device by the service worker after they play them, the same as any browser cache. Action: if the app ever bundles audio for offline packs, that needs explicit permission first. |
+| Full-surah recitation, 3 reciters | mp3quran.net | ⚠️ | Same arrangement: streamed from their servers, never rehosted. Used only for imams whose complete muṣḥaf is not published ayah by ayah anywhere — currently Bandar Balilah and Abdullah Khayyat of Masjid al-Haram. Action: confirm they are content with the traffic before any large launch. |
 
 ## Fonts
 
@@ -85,6 +86,13 @@ Downloaded at build time by `scripts/fetch-fonts.mjs` and self-hosted, so the ru
 no request to Google Fonts and leaks no user IP addresses to a third party.
 
 ---
+
+## A note on Masjid al-Aqsa
+
+Neither archive carries a complete Quran recorded by an imam of Masjid al-Aqsa. The app states
+this on the reciter screen and deliberately leaves that category empty rather than labelling
+another reciter as an Aqsa imam — a small inaccuracy of that kind is exactly the sort of thing
+that erodes trust. If an authentic complete recording exists and can be used, open an issue.
 
 ## Before a store release
 

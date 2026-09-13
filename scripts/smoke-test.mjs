@@ -44,12 +44,83 @@ check('every surah file loads with the fields the reader uses', () => {
     assert(s.n === n, `surah ${n} has wrong n`)
     assert(Array.isArray(s.ayahs) && s.ayahs.length > 0, `surah ${n} has no ayahs`)
     for (const a of s.ayahs) {
-      for (const k of ['v', 'ar', 'en', 'e2', 'tr', 'j']) {
+      for (const k of ['v', 'ar', 'en', 'e2', 'tr', 'j', 'p', 'h', 'r', 'm']) {
         assert(a[k] !== undefined, `${n}:${a.v} is missing "${k}"`)
       }
       assert(typeof a.ar === 'string' && a.ar.trim(), `${n}:${a.v} has empty Arabic`)
       assert(a.j >= 1 && a.j <= 30, `${n}:${a.v} has juz ${a.j}`)
+      assert(a.p >= 1 && a.p <= 604, `${n}:${a.v} has page ${a.p}`)
+      assert(a.h >= 1 && a.h <= 240, `${n}:${a.v} has hizb quarter ${a.h}`)
+      assert(a.m >= 1 && a.m <= 7, `${n}:${a.v} has manzil ${a.m}`)
     }
+  }
+})
+
+check('the 604-page muṣḥaf index is complete and in order', () => {
+  const meta = read('quran/meta.json')
+  assert(meta.pages.length === 604, `expected 604 pages, got ${meta.pages.length}`)
+  meta.pages.forEach((p, i) => {
+    assert(p.p === i + 1, `page at index ${i} is numbered ${p.p}`)
+    assert(p.from && p.to, `page ${p.p} has no range`)
+    assert(p.juz >= 1 && p.juz <= 30, `page ${p.p} has juz ${p.juz}`)
+  })
+  // Page 1 is al-Fatihah, page 604 ends the muṣḥaf at an-Nas.
+  assert(meta.pages[0].from.s === 1 && meta.pages[0].from.a === 1, 'page 1 does not start at 1:1')
+  assert(meta.pages[603].to.s === 114, `page 604 ends at surah ${meta.pages[603].to.s}, expected 114`)
+})
+
+check('every page has ayahs and page numbers never go backwards', () => {
+  const seen = new Set()
+  let last = 1
+  for (let n = 1; n <= 114; n++) {
+    for (const a of read(`quran/surah/${n}.json`).ayahs) {
+      assert(a.p === last || a.p === last + 1, `page jumped ${last} -> ${a.p} at ${n}:${a.v}`)
+      last = a.p
+      seen.add(a.p)
+    }
+  }
+  assert(last === 604, `last ayah is on page ${last}, expected 604`)
+  assert(seen.size === 604, `only ${seen.size} of 604 pages have any ayah on them`)
+})
+
+check('the 15 sajdas are recorded', () => {
+  const meta = read('quran/meta.json')
+  assert(meta.sajdas.length === 15, `expected 15 sajdas, got ${meta.sajdas.length}`)
+  let marked = 0
+  for (let n = 1; n <= 114; n++) {
+    marked += read(`quran/surah/${n}.json`).ayahs.filter(a => a.sajdah).length
+  }
+  assert(marked === 15, `${marked} ayahs carry a sajdah flag, expected 15`)
+})
+
+check('the reciter catalogue covers the Haramain and is honest about Aqsa', () => {
+  const cat = read('reciters.json')
+  assert(cat.perAyah.length >= 30, `only ${cat.perAyah.length} per-ayah reciters`)
+  const all = [...cat.perAyah, ...cat.surah]
+
+  for (const r of all) {
+    for (const k of ['id', 'name', 'style', 'mode']) assert(r[k], `reciter ${r.id} missing "${k}"`)
+    assert(r.mode === 'ayah' || r.mode === 'surah', `reciter ${r.id} has mode ${r.mode}`)
+    if (r.mode === 'surah') assert(/^https:\/\//.test(r.server), `surah reciter ${r.id} has no server`)
+  }
+
+  const haram = all.filter(r => r.masjid === 'haram')
+  const nabawi = all.filter(r => r.masjid === 'nabawi')
+  assert(haram.length >= 6, `only ${haram.length} Masjid al-Haram imams`)
+  assert(nabawi.length >= 3, `only ${nabawi.length} Masjid an-Nabawi imams`)
+
+  // Named specifically because the user asked for them.
+  const named = ['Yasser ad-Dossari', 'Abdurrahman as-Sudais', 'Maher al-Muaiqly', 'Abdullah Awad al-Juhany']
+  for (const n of named) assert(all.some(r => r.name === n), `${n} is missing from the catalogue`)
+
+  // No reciter may be labelled as an Aqsa imam while none exists in the sources.
+  assert(!all.some(r => r.masjid === 'aqsa'), 'a reciter is labelled aqsa but no such recording exists')
+  assert(cat.aqsaNote && cat.aqsaNote.length > 40, 'the Aqsa note is missing')
+
+  // Ayah-mode reciters must not duplicate a surah-mode entry for the same person.
+  const ayahNames = new Set(cat.perAyah.map(r => r.name))
+  for (const r of cat.surah) {
+    assert(!ayahNames.has(r.name), `${r.name} is listed both per-ayah and full-surah`)
   }
 })
 

@@ -33,6 +33,23 @@ export default function HadithIndex() {
         </Card>
       </div>
 
+      <div className="px-4 mt-3">
+        <Card as={Link} to="/hadith/lookup" className="tap block px-4 py-3.5 active:bg-bg border-gold/30">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-gold/10 text-gold grid place-items-center shrink-0">
+              <Icon name="search" size={19} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-[15px]">Find by reference number</p>
+              <p className="text-xs text-muted mt-0.5 truncate">
+                Someone quotes “Bukhari 1302” — check it yourself
+              </p>
+            </div>
+            <Icon name="forward" size={18} className="text-muted shrink-0" />
+          </div>
+        </Card>
+      </div>
+
       <Section title="Kutub as-Sittah — the six books">
         <div className="px-4 space-y-2">
           {six.map(c => <CollectionRow key={c.id} c={c} />)}
