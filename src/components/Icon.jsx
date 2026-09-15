@@ -23,10 +23,41 @@ const STYLE_TO_WEIGHT = {
   duotone: 'duotone'
 }
 
-// The one shape no general icon set has. Drawn on the same 256 grid as the rest
-// so it carries the same visual weight beside them.
+// The two shapes no general icon set has, drawn on the same 256 grid as the rest
+// so they carry the same visual weight beside them.
+//
+// `dua` is here because every set that has a praying-hands icon draws the palms
+// pressed flat together. That is the añjali gesture — Hindu, and Christian — and
+// it is not how a Muslim makes dua, which is with the hands held apart, cupped,
+// palms turned up. Shipping the wrong gesture in an Islamic app is worse than
+// shipping a plainer icon, so this one is drawn: two open palms side by side,
+// fingers up, a gap between them, and a rounded base where the hands cup.
+const HAND = (mirror) => {
+  const at = x => (mirror ? 256 - x : x)
+  // A finger is a capsule: straight sides, a half-round cap. Length matters more
+  // than detail — fingers shorter than the palm read as a mitten, which is what
+  // the first attempt looked like.
+  const finger = (x0, x1, top) => {
+    const r = (x1 - x0) / 2
+    return `M${at(x0)} 148 V${top + r} a${r} ${r} 0 0 1 ${at(x1) - at(x0)} 0 V148 Z`
+  }
+  // The palm narrows towards the wrist and rounds off at the bottom, which is
+  // where the cup of the hand is.
+  const palm = mirror
+    ? 'M228 144 H139 L148 198 C150 210 160 216 171 216 H196 C207 216 217 210 219 198 Z'
+    : 'M28 144 H117 L108 198 C106 210 96 216 85 216 H60 C49 216 39 210 37 198 Z'
+  return [
+    { d: palm },
+    { d: finger(28, 48, 104) },   // little
+    { d: finger(51, 71, 82) },    // ring
+    { d: finger(74, 94, 72) },    // middle, the longest
+    { d: finger(97, 117, 86) }    // index
+  ]
+}
+
 const LOCAL = {
-  kaaba: [{ d: 'M128 24a8 8 0 0 0-3.1.6l-72 30A8 8 0 0 0 48 62v132a8 8 0 0 0 4.9 7.4l72 30a8 8 0 0 0 6.2 0l72-30a8 8 0 0 0 4.9-7.4V62a8 8 0 0 0-4.9-7.4l-72-30A8 8 0 0 0 128 24Zm0 16.7L185.2 64 128 87.9 70.8 64ZM64 75.9l56 23.4v112.8l-56-23.3Zm72 136.2V99.3l56-23.4v112.9Z' }]
+  kaaba: [{ d: 'M128 24a8 8 0 0 0-3.1.6l-72 30A8 8 0 0 0 48 62v132a8 8 0 0 0 4.9 7.4l72 30a8 8 0 0 0 6.2 0l72-30a8 8 0 0 0 4.9-7.4V62a8 8 0 0 0-4.9-7.4l-72-30A8 8 0 0 0 128 24Zm0 16.7L185.2 64 128 87.9 70.8 64ZM64 75.9l56 23.4v112.8l-56-23.3Zm72 136.2V99.3l56-23.4v112.9Z' }],
+  dua: [...HAND(false), ...HAND(true)]
 }
 
 export default function Icon({ name, size = 20, className = '', style }) {
@@ -36,7 +67,9 @@ export default function Icon({ name, size = 20, className = '', style }) {
   const entry = SET.icons[name]
   // Fall back to the regular weight, then to a local drawing, rather than
   // rendering nothing — a missing icon leaves a button with no face on it.
-  const paths = entry?.[weight] || entry?.regular || LOCAL[name]
+  // A local drawing takes precedence: where one exists it is because the set's
+  // own version is wrong for this app, not merely missing.
+  const paths = LOCAL[name] || entry?.[weight] || entry?.regular
   if (!paths) return null
 
   return (
