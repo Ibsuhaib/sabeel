@@ -34,3 +34,4 @@ android/local.properties
 *.aab
 *.keystore
 !android/gradle/wrapper/gradle-wrapper.jar
+logo-preview.png
