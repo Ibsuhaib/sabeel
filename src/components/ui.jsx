@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from './Icon.jsx'
+import Tooltip from './Tooltip.jsx'
 
 export function Screen({ children, className = '' }) {
   return <div className={`min-h-full pb-24 ${className}`}>{children}</div>
@@ -35,10 +36,16 @@ export function Header({ title, subtitle, back, actions, sticky = true, large = 
   )
 }
 
-export function IconButton({ name, label, onClick, to, active, size = 20, className = '' }) {
+// `label` is the accessible name, the desktop tooltip and the long-press tooltip
+// all at once — every icon button in the app already passes one, so wrapping it
+// here is what gives them all a way of saying what they do on a touch screen.
+export function IconButton({ name, label, onClick, to, active, size = 20, className = '', tip }) {
   const cls = `tap touch-min grid place-items-center rounded-full transition-colors ${active ? 'text-brand' : 'text-muted hover:text-ink'} active:bg-surf ${className}`
-  if (to) return <Link to={to} aria-label={label} title={label} className={cls}><Icon name={name} size={size} fill={active ? 'currentColor' : 'none'} /></Link>
-  return <button onClick={onClick} aria-label={label} title={label} className={cls}><Icon name={name} size={size} fill={active ? 'currentColor' : 'none'} /></button>
+  const icon = <Icon name={name} size={size} fill={active ? 'currentColor' : 'none'} />
+  const inner = to
+    ? <Link to={to} aria-label={label} className={cls}>{icon}</Link>
+    : <button onClick={onClick} aria-label={label} className={cls}>{icon}</button>
+  return <Tooltip label={tip || label}>{inner}</Tooltip>
 }
 
 export function Card({ children, className = '', as: As = 'div', ...rest }) {

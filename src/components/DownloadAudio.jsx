@@ -5,6 +5,7 @@ import {
 } from '../lib/offlineAudio.js'
 import { Sheet, Button } from './ui.jsx'
 import Icon from './Icon.jsx'
+import Tooltip from './Tooltip.jsx'
 
 // The download control that sits in the reader header. Shows, at a glance,
 // whether this surah is on the device for the reciter you are actually using —
@@ -65,15 +66,22 @@ export default function DownloadAudio({ reciter, surah, ayahCount, surahName }) 
   const pct = progress ? Math.round((progress.done / progress.total) * 100) : 0
   const partial = status && status.cached > 0 && !status.complete
 
+  // Said in full, because a bare download arrow does not tell anyone that what it
+  // saves is the recitation rather than the text — which is already on the device.
+  const label = progress
+    ? `Saving the recitation, ${pct}% — tap to stop`
+    : status?.complete
+      ? `${reciter.name}'s recitation of this surah is saved — plays without a signal`
+      : partial
+        ? `Part of this recitation is saved. Tap to fetch the remaining ${status.total - status.cached}`
+        : `Save ${reciter.name}'s recitation of this surah to listen offline`
+
   return (
     <>
+      <Tooltip label={label}>
       <button
         onClick={() => (progress ? cancel() : setOpen(true))}
-        aria-label={
-          progress ? `Downloading, ${pct}% — tap to cancel`
-            : status?.complete ? 'Saved on this device'
-            : 'Download this surah for offline'
-        }
+        aria-label={label}
         className={`tap relative p-2 rounded-full transition-colors ${
           status?.complete ? 'text-brand' : progress ? 'text-gold' : 'text-muted hover:text-ink'
         }`}
@@ -95,6 +103,7 @@ export default function DownloadAudio({ reciter, surah, ayahCount, surahName }) 
           <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
         )}
       </button>
+      </Tooltip>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={`${surahName} · offline audio`}>
         <div className="p-4">
@@ -119,9 +128,11 @@ export default function DownloadAudio({ reciter, surah, ayahCount, surahName }) 
           )}
 
           <p className="text-xs text-muted leading-relaxed mb-4">
-            Anything you listen to is saved automatically. Downloading fetches the whole surah now,
-            so it plays with no signal at all. It is stored by your browser on this device — nothing
-            is uploaded, and it counts against this app's storage, not your photo roll.
+            This saves the <span className="text-ink">recitation audio</span> for this surah — the
+            Arabic text and translation are already on your device and need no download. Anything
+            you listen to is kept automatically; this fetches the whole surah at once so it plays
+            with no signal at all. It is stored by your browser on this device, nothing is
+            uploaded, and it counts against this app's storage rather than your photo roll.
           </p>
 
           {progress ? (
