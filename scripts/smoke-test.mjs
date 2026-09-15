@@ -313,7 +313,11 @@ check('search indexes cover their corpora', () => {
   const withCaps = q.rows.filter(r => /[A-Z]/.test(r.t)).length
   assert(withCaps > 5000, `only ${withCaps} rows retain capitals — index looks normalised`)
   const d = read('search/dua.json')
-  assert(d.rows.length === 97, `dua index has ${d.rows.length} rows, expected 97`)
+  // Derived from the catalogue rather than pinned to a number, so adding a dua
+  // category does not fail a test that has nothing to do with it. What matters
+  // is that the index covers every entry — a missing one is simply unfindable.
+  const expected = read('dua/index.json').categories.reduce((a, c) => a + c.count, 0)
+  assert(d.rows.length === expected, `dua index has ${d.rows.length} rows, expected ${expected}`)
 })
 
 check('a known search phrase actually matches', () => {
