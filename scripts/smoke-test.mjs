@@ -329,7 +329,7 @@ check('fonts and icons are present', () => {
     const file = url.match(/\/fonts\/([^']+)/)[1]
     assert(fs.existsSync(path.join(fontsDir, file)), `fonts.css references missing ${file}`)
   }
-  for (const f of ['icon-192.png', 'icon-512.png', 'favicon.svg']) {
+  for (const f of ['icon-192.png', 'icon-512.png', 'favicon-32.png']) {
     assert(fs.existsSync(path.join(DATA, '..', f)), `${f} missing`)
   }
 })

@@ -143,6 +143,21 @@ export function qiblaBearing(settings) {
   return adhan.Qibla(new adhan.Coordinates(settings.location.lat, settings.location.lng))
 }
 
+// Great-circle distance to the Kaaba, in kilometres. Shown on the qibla screen
+// because it is the one number that makes an obviously wrong location obvious.
+const KAABA = { lat: 21.4224779, lng: 39.8251832 }
+
+export function kaabaDistanceKm(settings) {
+  if (!settings.location) return null
+  const R = 6371
+  const rad = d => (d * Math.PI) / 180
+  const dLat = rad(KAABA.lat - settings.location.lat)
+  const dLng = rad(KAABA.lng - settings.location.lng)
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(settings.location.lat)) * Math.cos(rad(KAABA.lat)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)))
+}
+
 export function monthTimetable(settings, year, month) {
   const rows = []
   const days = new Date(year, month + 1, 0).getDate()

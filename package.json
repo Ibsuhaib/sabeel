@@ -14,7 +14,7 @@
     "data:dua": "node scripts/fetch-dua.mjs",
     "data:index": "node scripts/build-search-index.mjs",
     "data:verify": "node scripts/verify-integrity.mjs",
-    "data:all": "npm run data:quran && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons && npm run data:verify",
+    "data:all": "npm run data:quran && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:geomag && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons && npm run data:verify",
     "data:fonts": "node scripts/fetch-fonts.mjs",
     "data:icons": "node scripts/make-icons.mjs",
     "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs",
@@ -25,7 +25,8 @@
     "android:sync": "npm run build && npx cap sync android && node scripts/android-setup.mjs",
     "android:open": "npx cap open android",
     "android:apk": "npm run android:sync && cd android && gradlew.bat assembleRelease",
-    "data:adhkar": "node scripts/build-adhkar.mjs"
+    "data:adhkar": "node scripts/build-adhkar.mjs",
+    "data:geomag": "node scripts/fetch-geomag.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

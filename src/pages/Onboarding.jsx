@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { locate } from '../lib/locate.js'
 import { useSettings } from '../lib/settings.jsx'
 import { METHODS } from '../lib/prayer.js'
 import { loadReciters, groupReciters } from '../lib/reciters.js'
@@ -20,35 +21,17 @@ export default function Onboarding() {
   function useMyLocation() {
     setLocating(true)
     setLocError(null)
-    if (!navigator.geolocation) {
-      setLocError('This device has no location support. You can pick a city instead.')
-      setLocating(false)
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
+    locate()
+      .then(loc => {
         set({
-          location: {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            label: 'Current location'
-          },
+          location: loc,
           // A sensible regional default; the user can change it on the next screen.
-          method: guessMethod(pos.coords.latitude, pos.coords.longitude)
+          method: guessMethod(loc.lat, loc.lng)
         })
-        setLocating(false)
         setStep(1)
-      },
-      err => {
-        setLocError(
-          err.code === 1
-            ? 'Location permission was denied. Pick a city below — you can change it any time.'
-            : 'Could not get a location fix. Pick a city below.'
-        )
-        setLocating(false)
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
-    )
+      })
+      .catch(e => setLocError(e.message))
+      .finally(() => setLocating(false))
   }
 
   const s = STEPS[step]
@@ -79,7 +62,7 @@ export default function Onboarding() {
                 <Icon name="warn" size={14} className="shrink-0 mt-0.5" />{locError}
               </p>
             )}
-            <CityPicker onPick={city => { set({ location: city, method: city.method }); setStep(1) }} />
+            <CityPicker onPick={city => { set({ location: { ...city, source: 'city' }, method: city.method }); setStep(1) }} />
           </Step>
         )}
 

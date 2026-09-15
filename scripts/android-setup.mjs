@@ -32,7 +32,13 @@ const PERMISSIONS = [
   ['android.permission.VIBRATE', 'the vibrate option'],
   ['android.permission.RECEIVE_BOOT_COMPLETED', 'reschedule prayers after a restart'],
   ['android.permission.WAKE_LOCK', 'let the notification fire while the device is dozing'],
-  ['android.permission.FOREGROUND_SERVICE', 'keep recitation playing in the background']
+  ['android.permission.FOREGROUND_SERVICE', 'keep recitation playing in the background'],
+  // Without these two, navigator.geolocation inside the WebView fails outright on
+  // Android — Capacitor's bridge only raises the runtime prompt for permissions
+  // the manifest declares. Prayer times and the qibla both depend on a fix, so
+  // "Use my location" was silently impossible in the APK until this was added.
+  ['android.permission.ACCESS_COARSE_LOCATION', 'prayer times and qibla for where you are'],
+  ['android.permission.ACCESS_FINE_LOCATION', 'a more exact fix, when the device offers one']
 ]
 
 let manifest = fs.readFileSync(manifestPath, 'utf8')

@@ -126,6 +126,10 @@ export const asmaUlHusna = () => load('dua/asma-ul-husna.json')
 
 /* --------------------------------- Search --------------------------------- */
 
+// The World Magnetic Model, used to turn a magnetic compass reading into a true
+// one. 1.6 KB, so it is fetched once and kept for the life of the session.
+export const geomagModel = () => load('geomag/wmm.json')
+
 export const quranSearchIndex = () => load('search/quran.json')
 export const duaSearchIndex = () => load('search/dua.json')
 

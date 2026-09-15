@@ -30,4 +30,17 @@ export async function getJSON(url, tries = 3) {
   }
 }
 
+export async function getText(url, tries = 3) {
+  for (let i = 1; i <= tries; i++) {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return await res.text()
+    } catch (e) {
+      if (i === tries) throw new Error(`failed ${url}: ${e.message}`)
+      await new Promise(r => setTimeout(r, 1200 * i))
+    }
+  }
+}
+
 export function log(...a) { console.log(...a) }

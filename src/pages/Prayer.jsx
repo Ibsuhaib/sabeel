@@ -6,6 +6,7 @@ import { fmtTime, fmtCountdown, dateKey } from '../lib/format.js'
 import { hijri } from '../lib/hijri.js'
 import { store } from '../lib/store.js'
 import { Screen, Header, Card, Section, Sheet, IconButton, Button, Empty } from '../components/ui.jsx'
+import LocationPrompt from '../components/LocationPrompt.jsx'
 import Icon from '../components/Icon.jsx'
 
 export default function Prayer() {
@@ -56,6 +57,8 @@ export default function Prayer() {
         large
         actions={<IconButton name="compass" label="Qibla" to="/qibla" />}
       />
+
+      <LocationPrompt what="Prayer times" />
 
       <div className="flex items-center justify-between px-4 pt-3">
         <IconButton name="back" label="Previous day" onClick={() => setOffset(o => o - 1)} />

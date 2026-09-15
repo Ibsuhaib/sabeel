@@ -8,6 +8,7 @@ import { store } from '../lib/store.js'
 import { hijri } from '../lib/hijri.js'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Sheet, Stepper } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import { locate as getFix, describeAccuracy } from '../lib/locate.js'
 
 export default function Settings() {
   const { settings, set, setAdjustment, reset } = useSettings()
@@ -41,11 +42,12 @@ export default function Settings() {
     }
   }
 
-  function locate() {
-    navigator.geolocation?.getCurrentPosition(
-      pos => set({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude, label: 'Current location' } }),
-      () => setMsg('Location permission was denied.')
-    )
+  function useMyLocation() {
+    setMsg('Locating…')
+    getFix()
+      .then(loc => set({ location: loc }))
+      .catch(e => setMsg(e.message))
+      .then(() => setMsg(m => (m === 'Locating…' ? null : m)))
   }
 
   const method = METHODS.find(m => m.id === settings.method)
@@ -70,12 +72,15 @@ export default function Settings() {
           <div className="px-4 py-3">
             <p className="text-sm">{settings.location?.label || 'Not set'}</p>
             {settings.location && (
-              <p className="text-[11px] text-muted mt-0.5 tabular-nums">
-                {settings.location.lat.toFixed(4)}, {settings.location.lng.toFixed(4)}
-              </p>
+              <>
+                <p className="text-[11px] text-muted mt-0.5 tabular-nums">
+                  {settings.location.lat.toFixed(4)}, {settings.location.lng.toFixed(4)}
+                </p>
+                <p className="text-[11px] text-muted/80 mt-0.5">{describeAccuracy(settings.location)}</p>
+              </>
             )}
           </div>
-          <button onClick={locate} className="tap w-full px-4 py-3 text-left text-sm text-brand">
+          <button onClick={useMyLocation} className="tap w-full px-4 py-3 text-left text-sm text-brand">
             <Icon name="location" size={15} className="inline mr-2 -mt-0.5" />Use my current location
           </button>
         </Card>
