@@ -1,162 +1,152 @@
-// Build-time: the app mark, at every size the web and Android ask for, with no
-// image dependency at all — the PNG encoder below is ~60 lines of zlib.
+// Build-time: the app mark, at every size the web and Android ask for.
 //
-// The mark is the lafẓ al-jalālah — الله — written with a qalam, inside a ring
-// carrying four khatim stars. The letters are drawn as pen strokes rather than
-// pulled from a font, so there is no font dependency and the mark stays sharp at
-// 48px, which is the size a launcher actually renders. The ring and the khatim
-// are the geometry already used on the surah banners, so the icon belongs to the
-// same family as the rest of the app.
+// The mark is the brand artwork in assets/brand/logo.png — a gold medallion
+// holding a mosque, crescent and leaves. It arrives as a 1254px square on a
+// cream ground, so this script finds the medallion, cuts it out as a circle,
+// and composites it onto the app's deep green at each size the platforms want.
 //
-// The letterforms live in logo-forms.mjs; the pen that draws them in calligraphy.mjs.
+// There is still no image dependency: png.mjs reads and writes the files and
+// box-filters the resize, which is what keeps the thin gold rim and the minaret
+// from breaking up on the way down to a 48px launcher icon.
+//
+// scripts/calligraphy.mjs and logo-forms.mjs remain — they draw the lafẓ
+// al-jalālah with a modelled qalam, and `node scripts/preview-logo.mjs` renders
+// those candidates — but the brand artwork is what ships.
 import fs from 'node:fs'
 import path from 'node:path'
-import zlib from 'node:zlib'
 import { ROOT, ensure, log, kb } from './_util.mjs'
-import { inWord, inPoly } from './calligraphy.mjs'
-import { lafzAlJalalah } from './logo-forms.mjs'
+import { decodePNG, encodePNG, resize } from './png.mjs'
 
 const OUT = ensure(path.join(ROOT, 'public'))
+const SOURCE = path.join(ROOT, 'assets', 'brand', 'logo.png')
 
-const GREEN = [15, 23, 17]      // the app's background green
-const DEEP = [19, 46, 33]       // a touch lighter, so the ground is not flat black
-const GOLD = [211, 173, 94]
-const CREAM = [240, 238, 230]
-const BRAND = [106, 190, 143]
+const DEEP = [19, 46, 33]       // the ground the medallion sits on
 
-/* ------------------------------ png encoder ------------------------------ */
+/* ----------------------------- the artwork ------------------------------ */
 
-const CRC_TABLE = (() => {
-  const t = new Int32Array(256)
-  for (let n = 0; n < 256; n++) {
-    let c = n
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-    t[n] = c
+// Locate the medallion inside the source square. Measured across the middle
+// rather than over the whole image, because the artwork carries a drop shadow
+// below it that would otherwise pull the centre down and inflate the radius.
+function findMedallion(img) {
+  const { width: W, height: H, data } = img
+  const at = (x, y) => (y * W + x) * 4
+  const g = [data[at(2, 2)], data[at(2, 2) + 1], data[at(2, 2) + 2]]
+  const far = (x, y) => {
+    const i = at(x, y)
+    return Math.abs(data[i] - g[0]) + Math.abs(data[i + 1] - g[1]) + Math.abs(data[i + 2] - g[2]) > 24
   }
-  return t
-})()
 
-function crc32(buf) {
-  let crc = 0xffffffff
-  for (const b of buf) crc = CRC_TABLE[(crc ^ b) & 0xff] ^ (crc >>> 8)
-  return (crc ^ 0xffffffff) >>> 0
+  let left = W, right = 0, top = H
+  for (const y of [Math.round(H * 0.47), Math.round(H * 0.5), Math.round(H * 0.53)]) {
+    for (let x = 0; x < W; x++) if (far(x, y)) { if (x < left) left = x; break }
+    for (let x = W - 1; x >= 0; x--) if (far(x, y)) { if (x > right) right = x; break }
+  }
+  for (const x of [Math.round(W * 0.47), Math.round(W * 0.5), Math.round(W * 0.53)]) {
+    for (let y = 0; y < H; y++) if (far(x, y)) { if (y < top) top = y; break }
+  }
+
+  const d = right - left + 1
+  return { cx: (left + right) / 2, cy: top + d / 2, r: d / 2 }
 }
 
-function chunk(type, data) {
-  const len = Buffer.alloc(4)
-  len.writeUInt32BE(data.length)
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
-  const crc = Buffer.alloc(4)
-  crc.writeUInt32BE(crc32(body))
-  return Buffer.concat([len, body, crc])
-}
+// Cut the medallion out as a square tile with a circular alpha, so whatever is
+// behind it — green, or nothing at all for an adaptive foreground — shows through.
+function cutTile(img, m) {
+  const size = Math.round(m.r * 2)
+  const tile = Buffer.alloc(size * size * 4)
+  const x0 = Math.round(m.cx - m.r)
+  const y0 = Math.round(m.cy - m.r)
+  const rr = m.r - 1.5          // pull in a touch so the cut lands inside the rim
 
-function encodePNG(size, px) {
-  const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
-  ihdr[8] = 8   // bit depth
-  ihdr[9] = 6   // RGBA
-  const raw = Buffer.alloc((size * 4 + 1) * size)
   for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0
-    px.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4)
+    for (let x = 0; x < size; x++) {
+      const d = (y * size + x) * 4
+      const sx = x0 + x, sy = y0 + y
+      if (sx < 0 || sy < 0 || sx >= img.width || sy >= img.height) continue
+      const s = (sy * img.width + sx) * 4
+
+      // Antialias the circular edge over one pixel.
+      const dist = Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2)
+      const a = dist <= rr - 0.5 ? 1 : dist >= rr + 0.5 ? 0 : rr + 0.5 - dist
+      if (a <= 0) continue
+
+      tile[d] = img.data[s]
+      tile[d + 1] = img.data[s + 1]
+      tile[d + 2] = img.data[s + 2]
+      tile[d + 3] = Math.round(255 * a)
+    }
   }
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0))
-  ])
+  return { width: size, height: size, data: tile }
 }
 
-/* -------------------------------- geometry ------------------------------- */
+const source = decodePNG(fs.readFileSync(SOURCE))
+const medallion = findMedallion(source)
+const TILE = cutTile(source, medallion)
 
-const square = (cx, cy, r, rot) =>
-  [0, 1, 2, 3].map(i => {
-    const a = rot + (i * Math.PI) / 2
-    return [cx + r * Math.cos(a), cy + r * Math.sin(a)]
-  })
+/* ------------------------------ compositing ------------------------------ */
 
-// The khatim: two squares at 45° to each other.
-function inStar(x, y, cx, cy, r) {
-  return inPoly(x, y, square(cx, cy, r, 0)) || inPoly(x, y, square(cx, cy, r, Math.PI / 4))
-}
-
-function roundedRectAlpha(x, y, size, radius) {
+const roundedAlpha = (x, y, size, radius) => {
   const dx = Math.max(radius - x, 0, x - (size - radius))
   const dy = Math.max(radius - y, 0, y - (size - radius))
-  return Math.hypot(dx, dy) <= radius
+  const d = Math.hypot(dx, dy)
+  return d <= radius - 0.5 ? 1 : d >= radius + 0.5 ? 0 : radius + 0.5 - d
 }
 
-// The nib: a flat pen held at the angle a naskh hand is cut to. Every stroke in
-// the word is drawn with this one pen, which is where the thick–thin modulation
-// comes from — a stroke is broad across the nib and fine along it.
-const NIB = { angle: -Math.PI / 5, width: 0.056 }
-const WORD = lafzAlJalalah()
-
-const RING_IN = 0.408, RING_OUT = 0.430, RING_CY = 0.470
-const KHATIM = [[0.5, 0.042], [0.5, 0.898], [0.072, RING_CY], [0.928, RING_CY]]
-
-// Colour at a normalised point. `mode` decides whether the ground is drawn —
-// an adaptive foreground must be transparent so Android can mask it.
-function sample(u, v, mode) {
-  const d = Math.hypot(u - 0.5, v - RING_CY)
-  if (d > RING_IN && d < RING_OUT) return GOLD
-  for (const [cx, cy] of KHATIM) if (inStar(u, v, cx, cy, 0.050)) return GOLD
-
-  if (inWord(u, v, WORD, NIB)) return GOLD
-
-  return mode === 'foreground' ? null : DEEP
-}
-
+/**
+ * @param mode 'legacy'     rounded square on the deep ground (web + launcher)
+ *             'full'       full square on the deep ground (Apple never masks)
+ *             'foreground' the medallion alone, transparent (Android adaptive)
+ */
 function draw(size, mode) {
+  // Adaptive foregrounds are masked to the middle ~66% of the canvas, so the art
+  // is drawn smaller there to survive whatever shape a launcher applies.
+  const inset = mode === 'foreground' ? 0.64 : 0.86
+  const art = Math.round(size * inset)
+  const scaled = resize(TILE, art, art)
+  const off = Math.round((size - art) / 2)
+
   const px = Buffer.alloc(size * size * 4)
-  const SS = 3                       // supersample for clean diagonals
-  // Adaptive foregrounds are masked to the centre ~66%, so the art is drawn
-  // smaller inside the canvas to survive any mask shape Android applies.
-  const scale = mode === 'foreground' ? 0.62 : 1
   const radius = size * 0.225
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      let r = 0, g = 0, b = 0, a = 0
-      for (let sy = 0; sy < SS; sy++) {
-        for (let sx = 0; sx < SS; sx++) {
-          const fx = x + (sx + 0.5) / SS
-          const fy = y + (sy + 0.5) / SS
+      const d = (y * size + x) * 4
 
-          if (mode === 'legacy' && !roundedRectAlpha(fx, fy, size, radius)) continue
+      // Ground.
+      let groundA = 0
+      if (mode === 'legacy') groundA = roundedAlpha(x + 0.5, y + 0.5, size, radius)
+      else if (mode === 'full') groundA = 1
 
-          const u = (fx / size - 0.5) / scale + 0.5
-          const v = (fy / size - 0.5) / scale + 0.5
-          if (u < 0 || u > 1 || v < 0 || v > 1) {
-            if (mode === 'foreground') continue
-            r += DEEP[0]; g += DEEP[1]; b += DEEP[2]; a += 255
-            continue
-          }
+      let r = DEEP[0] * groundA, g = DEEP[1] * groundA, b = DEEP[2] * groundA, a = groundA
 
-          const c = sample(u, v, mode)
-          if (!c) continue
-          r += c[0]; g += c[1]; b += c[2]; a += 255
+      // Medallion over it.
+      const ax = x - off, ay = y - off
+      if (ax >= 0 && ay >= 0 && ax < art && ay < art) {
+        const s = (ay * art + ax) * 4
+        const sa = scaled.data[s + 3] / 255
+        if (sa > 0) {
+          // Art must not paint outside the rounded ground it sits on.
+          const clip = mode === 'legacy' ? Math.min(sa, groundA) : sa
+          r = scaled.data[s] * clip + r * (1 - clip)
+          g = scaled.data[s + 1] * clip + g * (1 - clip)
+          b = scaled.data[s + 2] * clip + b * (1 - clip)
+          a = clip + a * (1 - clip)
         }
       }
-      const n = SS * SS
-      const i = (y * size + x) * 4
-      const alpha = a / n
-      if (alpha > 0) {
-        px[i] = Math.round(r / (a / 255))
-        px[i + 1] = Math.round(g / (a / 255))
-        px[i + 2] = Math.round(b / (a / 255))
+
+      if (a > 0) {
+        px[d] = Math.round(r / a)
+        px[d + 1] = Math.round(g / a)
+        px[d + 2] = Math.round(b / a)
       }
-      px[i + 3] = Math.round(alpha)
+      px[d + 3] = Math.round(a * 255)
     }
   }
   return px
 }
 
 const write = (file, size, mode) => {
-  const png = encodePNG(size, draw(size, mode))
+  const png = encodePNG(size, size, draw(size, mode))
   ensure(path.dirname(file))
   fs.writeFileSync(file, png)
   return png.length
@@ -165,14 +155,20 @@ const write = (file, size, mode) => {
 /* --------------------------------- build --------------------------------- */
 
 log('Sabeel · Icons')
+log(`  source assets/brand/logo.png · medallion r=${medallion.r.toFixed(0)}px at ${medallion.cx.toFixed(0)},${medallion.cy.toFixed(0)}`)
 
 for (const size of [192, 512]) {
   const bytes = write(path.join(OUT, `icon-${size}.png`), size, 'legacy')
   log(`  icon-${size}.png${' '.repeat(3)} ${kb(bytes)}`)
 }
-// Apple's home-screen icon is never masked, so it needs the square drawn in.
 write(path.join(OUT, 'apple-touch-icon.png'), 180, 'full')
 log('  apple-touch-icon.png')
+
+// A raster favicon, because the mark is artwork rather than geometry — nothing
+// here would survive being redrawn as a handful of vector paths.
+write(path.join(OUT, 'favicon-32.png'), 32, 'legacy')
+log('  favicon-32.png')
+fs.rmSync(path.join(OUT, 'favicon.svg'), { force: true })
 
 // Android launcher icons. Without these the APK ships Capacitor's placeholder.
 const ANDROID_RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res')
@@ -187,19 +183,19 @@ if (fs.existsSync(ANDROID_RES)) {
   }
 
   const anydpi = ensure(path.join(ANDROID_RES, 'mipmap-anydpi-v26'))
+  // No <monochrome> entry: a themed icon is drawn as a flat silhouette, and a
+  // medallion reduced to one colour is an illegible blob.
   const adaptive = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-    <monochrome android:drawable="@drawable/ic_stat_sabeel"/>
 </adaptive-icon>
 `
   fs.writeFileSync(path.join(anydpi, 'ic_launcher.xml'), adaptive)
   fs.writeFileSync(path.join(anydpi, 'ic_launcher_round.xml'), adaptive)
 
   const values = ensure(path.join(ANDROID_RES, 'values'))
-  const colorsPath = path.join(values, 'ic_launcher_background.xml')
-  fs.writeFileSync(colorsPath, `<?xml version="1.0" encoding="utf-8"?>
+  fs.writeFileSync(path.join(values, 'ic_launcher_background.xml'), `<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#${DEEP.map(c => c.toString(16).padStart(2, '0')).join('')}</color>
 </resources>
@@ -208,32 +204,3 @@ if (fs.existsSync(ANDROID_RES)) {
 } else {
   log('  android/ not present — skipping launcher icons')
 }
-
-// The favicon is the same mark as vector, so it stays crisp in a browser tab.
-// A pen stroke's outline is its centreline offset forward by half the nib and
-// back again — the same Minkowski sum the raster path computes, written once as
-// a polygon instead of tested per pixel.
-const rgb = c => `rgb(${c.join(',')})`
-
-const strokeOutline = (pts, width) => {
-  const hx = (Math.cos(NIB.angle) * width) / 2
-  const hy = (Math.sin(NIB.angle) * width) / 2
-  const fwd = pts.map(([x, y]) => `${((x + hx) * 100).toFixed(2)},${((y + hy) * 100).toFixed(2)}`)
-  const back = [...pts].reverse().map(([x, y]) => `${((x - hx) * 100).toFixed(2)},${((y - hy) * 100).toFixed(2)}`)
-  return `<polygon points="${[...fwd, ...back].join(' ')}" fill="${rgb(GOLD)}"/>`
-}
-
-const starSvg = (cx, cy, r) => `
-    <rect x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}" fill="${rgb(GOLD)}"/>
-    <rect x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}" fill="${rgb(GOLD)}" transform="rotate(45 ${cx} ${cy})"/>`
-
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Sabeel">
-  <rect width="100" height="100" rx="22.5" fill="${rgb(DEEP)}"/>
-  <circle cx="50" cy="${RING_CY * 100}" r="${((RING_IN + RING_OUT) / 2 * 100).toFixed(2)}"
-          fill="none" stroke="${rgb(GOLD)}" stroke-width="${((RING_OUT - RING_IN) * 100).toFixed(2)}"/>
-  ${KHATIM.map(([x, y]) => starSvg(x * 100, y * 100, 5)).join('')}
-  ${WORD.map(st => strokeOutline(st.pts, st.width ?? NIB.width)).join('')}
-</svg>
-`
-fs.writeFileSync(path.join(OUT, 'favicon.svg'), svg)
-log('  favicon.svg')

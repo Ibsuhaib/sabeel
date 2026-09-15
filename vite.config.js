@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'fonts/*.woff2'],
+      includeAssets: ['favicon-32.png', 'fonts/*.woff2'],
       manifest: {
         name: 'Sabeel — Quran, Hadith, Prayer',
         short_name: 'Sabeel',
