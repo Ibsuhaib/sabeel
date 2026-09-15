@@ -13,6 +13,8 @@ const EVERY_AYAH = 'https://everyayah.com/data'
 
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 export const REPEATS = [1, 2, 3, 5, 7, 10, Infinity]
+// A pause between ayahs, for repeating after the reciter while memorising.
+export const DELAYS = [0, 1, 2, 3, 5, 8]
 
 export const ayahFileId = (surah, ayah) =>
   `${String(surah).padStart(3, '0')}${String(ayah).padStart(3, '0')}`
@@ -39,11 +41,14 @@ const initial = {
   repeat: 1,           // repeats of the CURRENT ayah before moving on
   played: 0,
   range: null,         // { from, to } — loop this span of ayahs
-  autoAdvance: true    // continue into the next ayah when one finishes
+  autoAdvance: true,   // continue into the next ayah when one finishes
+  delay: 0,            // seconds of silence before the next ayah
+  waiting: false       // sitting in that silence right now
 }
 
 let state = { ...initial }
 let el = null
+let delayTimer = null
 const listeners = new Set()
 
 function emit() {
@@ -108,9 +113,25 @@ function onEnded() {
   if (!state.autoAdvance) { state.playing = false; emit(); return }
 
   const next = state.ayah + 1
-  if (state.range && next > state.range.to) return load(state.surah, state.range.from)
-  if (state.lastAyah && next > state.lastAyah) { state.playing = false; emit(); return }
-  load(state.surah, next)
+  const target = (state.range && next > state.range.to) ? state.range.from
+    : (state.lastAyah && next > state.lastAyah) ? null
+    : next
+
+  if (target == null) { state.playing = false; emit(); return }
+
+  // The gap is the point when you are repeating after the reciter, so it has to
+  // be real silence rather than the next ayah starting underneath you.
+  if (state.delay > 0) {
+    state.waiting = true
+    emit()
+    clearTimeout(delayTimer)
+    delayTimer = setTimeout(() => {
+      state.waiting = false
+      load(state.surah, target)
+    }, state.delay * 1000)
+    return
+  }
+  load(state.surah, target)
 }
 
 function load(surah, ayah, { autoplay = true } = {}) {
@@ -174,7 +195,7 @@ export const player = {
     this.play(surah, ayah, lastAyah)
   },
 
-  pause() { el?.pause() },
+  pause() { clearTimeout(delayTimer); state.waiting = false; el?.pause(); emit() },
   resume() { el?.play().catch(() => {}) },
 
   playPause() {
@@ -217,6 +238,7 @@ export const player = {
   },
 
   setRepeat(repeat) { state.repeat = repeat; state.played = 0; emit() },
+  setDelay(seconds) { state.delay = Math.max(0, Number(seconds) || 0); emit() },
   setAutoAdvance(on) { state.autoAdvance = on; emit() },
 
   // A→B: loop a span of ayahs. Starts playing from the beginning of the span.
@@ -234,6 +256,8 @@ export const player = {
   clearRange() { state.range = null; emit() },
 
   stop() {
+    clearTimeout(delayTimer)
+    state.waiting = false
     el?.pause()
     if (el) el.removeAttribute('src')
     state = { ...initial, reciter: state.reciter, speed: state.speed }

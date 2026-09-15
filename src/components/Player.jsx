@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { player, SPEEDS, REPEATS } from '../lib/audio.js'
+import { player, SPEEDS, REPEATS, DELAYS } from '../lib/audio.js'
 import { usePlayer, groupReciters, fmtClock, loadReciters } from '../lib/reciters.js'
 import { quranMeta } from '../lib/data.js'
 import { useSettings } from '../lib/settings.jsx'
@@ -52,7 +52,9 @@ export default function Player() {
             <span className="block text-[11px] text-muted truncate">
               {s.error
                 ? <span className="text-amber-500">{s.error}</span>
-                : <>
+                : s.waiting
+                  ? <span className="text-gold">Pausing before the next ayah…</span>
+                  : <>
                     {s.reciter.name}
                     {s.range && ` · looping ${s.range.from}–${s.range.to}`}
                     {s.repeat !== 1 && ` · repeat ${s.repeat === Infinity ? '∞' : `${s.played + 1}/${s.repeat}`}`}
@@ -164,6 +166,17 @@ function PlayerSheet({ open, onClose, state: s, catalogue, ayahCount, surahName,
             columns={4} value={s.repeat} onChange={v => player.setRepeat(v)}
             options={REPEATS.map(v => ({ id: v, label: v === 1 ? 'Off' : v === Infinity ? '∞' : `${v}×` }))}
           />
+
+          <div className="px-4 pt-5 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
+            Pause between ayahs
+          </div>
+          <Choice
+            columns={6} value={s.delay} onChange={v => player.setDelay(v)}
+            options={DELAYS.map(v => ({ id: v, label: v === 0 ? 'None' : `${v}s` }))}
+          />
+          <p className="px-4 pt-2 text-[11px] text-muted leading-relaxed">
+            Silence after each ayah, for repeating it back while memorising.
+          </p>
 
           <div className="px-4 pt-5 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">Speed</div>
           <Choice

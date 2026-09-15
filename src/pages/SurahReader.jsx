@@ -11,6 +11,7 @@ import { Loading, LoadError, Sheet, Toggle, Choice, IconButton, Button } from '.
 import { ReciterList } from '../components/Player.jsx'
 import DownloadAudio from '../components/DownloadAudio.jsx'
 import SwipePager from '../components/SwipePager.jsx'
+import SurahInfo from '../components/SurahInfo.jsx'
 import { useReadingTimer } from '../lib/useReadingTimer.js'
 import Icon from '../components/Icon.jsx'
 
@@ -231,7 +232,10 @@ export default function SurahReader() {
           onSelect={id => { set({ reciter: id }); setSheet(null) }}
         />
       </Sheet>
-      <SurahJump open={sheet === 'index'} onClose={() => setSheet(null)} meta={meta} current={num} />
+      <SurahJump
+        open={sheet === 'index'} onClose={() => setSheet(null)}
+        meta={meta} current={num} info={info} ayahs={ayahs}
+      />
     </div>
   )
 }
@@ -368,9 +372,30 @@ function ReadingSettings({ open, onClose, settings, set, onOpenReciters, onMusha
   )
 }
 
-function SurahJump({ open, onClose, meta, current }) {
+function SurahJump({ open, onClose, meta, current, info, ayahs }) {
+  const [tab, setTab] = useState('info')
+  useEffect(() => { if (open) setTab('info') }, [open])
+
   return (
-    <Sheet open={open} onClose={onClose} title="Jump to surah">
+    <Sheet open={open} onClose={onClose} title={info?.en || 'Surah'}>
+      <div className="flex gap-2 px-4 py-3 border-b border-line">
+        {[['info', 'Surah info'], ['list', 'All surahs']].map(([id, label]) => (
+          <button
+            key={id} onClick={() => setTab(id)}
+            className={`tap chip px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
+              tab === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
+            }`}
+          >{label}</button>
+        ))}
+      </div>
+
+      {tab === 'info' && (
+        <div className="py-4">
+          <SurahInfo surah={info} ayahs={ayahs} meta={meta} />
+        </div>
+      )}
+
+      {tab === 'list' && (
       <ul className="divide-y divide-line">
         {meta.surahs.map(s => (
           <li key={s.n}>
@@ -385,6 +410,7 @@ function SurahJump({ open, onClose, meta, current }) {
           </li>
         ))}
       </ul>
+      )}
     </Sheet>
   )
 }

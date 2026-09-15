@@ -1,9 +1,25 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { duaIndex } from '../lib/data.js'
-import { Screen, Header, Loading, LoadError, Card, Section, IconButton } from '../components/ui.jsx'
 import { useData } from '../lib/useData.js'
+import { Screen, Header, Loading, LoadError, Card, Section, IconButton } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+
+// Tools that are not a list of duas but belong on this screen — reached far more
+// often than anything buried in a menu.
+const TOOLS = [
+  { to: '/dua/tasbih', icon: 'counter', label: 'Tasbih', note: 'Counter with haptics' },
+  { to: '/dua/names', icon: 'star', label: '99 Names', note: 'Asma ul-Husna' },
+  { to: '/qibla', icon: 'compass', label: 'Qibla', note: 'Direction of the Kaaba' },
+  { to: '/search?tab=dua', icon: 'search', label: 'Search duas', note: 'By word or situation' }
+]
+
+const ICON_FOR = {
+  sunrise: 'sunrise',
+  sunset: 'sunset',
+  prayer: 'prayer',
+  book: 'book',
+  day: 'dua'
+}
 
 export default function DuaIndex() {
   const { data: idx, error, retry } = useData(duaIndex, [], { label: 'the dua list' })
@@ -21,35 +37,33 @@ export default function DuaIndex() {
         actions={<IconButton name="search" label="Search duas" to="/search?tab=dua" />}
       />
 
-      <Section title="Tools">
-        <div className="grid grid-cols-2 gap-2 px-4">
-          <Card as={Link} to="/dua/tasbih" className="tap block p-4 active:bg-bg">
-            <Icon name="counter" size={22} className="text-brand" />
-            <p className="font-medium text-sm mt-2">Tasbih counter</p>
-            <p className="text-[11px] text-muted mt-0.5">With haptics and targets</p>
-          </Card>
-          <Card as={Link} to="/dua/names" className="tap block p-4 active:bg-bg">
-            <Icon name="star" size={22} className="text-gold" />
-            <p className="font-medium text-sm mt-2">99 Names</p>
-            <p className="text-[11px] text-muted mt-0.5">Asma ul-Husna with meanings</p>
-          </Card>
+      <Section title="Collections">
+        <div className="grid grid-cols-2 gap-2.5 px-4">
+          {idx.categories.map(c => (
+            <Link
+              key={c.slug} to={`/dua/${c.slug}`}
+              className="tap flex flex-col items-center text-center gap-2 px-3 py-5 rounded-2xl bg-surf border border-line active:border-brand/50 min-h-[128px]"
+            >
+              <span className="w-14 h-14 rounded-2xl bg-brand/10 text-brand grid place-items-center shrink-0">
+                <Icon name={ICON_FOR[c.icon] || 'dua'} size={26} />
+              </span>
+              <span className="min-w-0 w-full">
+                <span className="block text-sm font-medium leading-tight">{c.title}</span>
+                <span className="block text-[11px] text-muted mt-1 leading-snug line-clamp-2">{c.blurb}</span>
+                <span className="block text-[10px] text-brand mt-1.5 tabular-nums">{c.count} entries</span>
+              </span>
+            </Link>
+          ))}
         </div>
       </Section>
 
-      <Section title="Collections">
-        <div className="px-4 space-y-2">
-          {idx.categories.map(c => (
-            <Card key={c.slug} as={Link} to={`/dua/${c.slug}`} className="tap block px-4 py-3.5 active:bg-bg">
-              <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-xl bg-brand/10 text-brand grid place-items-center shrink-0">
-                  <Icon name={c.icon === 'sunrise' ? 'sunrise' : c.icon === 'sunset' ? 'sunset' : c.icon === 'prayer' ? 'prayer' : c.icon === 'book' ? 'book' : 'dua'} size={19} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-[15px]">{c.title}</span>
-                  <span className="block text-xs text-muted mt-0.5 truncate">{c.blurb} · {c.count} entries</span>
-                </span>
-                <Icon name="forward" size={18} className="text-muted shrink-0" />
-              </div>
+      <Section title="Tools">
+        <div className="grid grid-cols-2 gap-2.5 px-4">
+          {TOOLS.map(t => (
+            <Card key={t.to} as={Link} to={t.to} className="tap block p-4 active:bg-bg min-h-[92px]">
+              <Icon name={t.icon} size={22} className="text-gold" />
+              <p className="font-medium text-sm mt-2">{t.label}</p>
+              <p className="text-[11px] text-muted mt-0.5 leading-snug">{t.note}</p>
             </Card>
           ))}
         </div>
