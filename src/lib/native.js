@@ -183,6 +183,12 @@ export async function wireBackButton({ canGoBack, goBack, atRoot, toRoot }) {
   let timer = null
 
   const sub = await App.addListener('backButton', () => {
+    // Android's own convention: back closes the keyboard before it leaves the
+    // screen. Navigating out from under someone who is still typing is jarring
+    // and loses what they were writing.
+    const el = document.activeElement
+    if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) { el.blur(); return }
+
     if (!atRoot()) {
       if (canGoBack()) goBack()
       else toRoot()
