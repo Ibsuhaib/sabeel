@@ -94,9 +94,15 @@ jobs:
           cp "${{ steps.apk.outputs.path }}" sabeel.apk
           NOTES=$(printf '%s
 '             "Newest build of Sabeel, from \`${GITHUB_SHA::7}\` on $(date -u '+%d %B %Y')."             ""             "**[Download sabeel.apk](https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/sabeel.apk)** — ${{ steps.apk.outputs.size }}"             ""             "Open it on your Android phone. The first time, Android will ask you to"             "allow installing from your browser or file manager, because this does not"             "come from the Play Store."             ""             "Everything is in the app already: the Quran with the muṣḥaf page layout,"             "all 36,512 hadith, the duas, prayer calculation, the adhan and the fonts."             "Only recitation streams, and whatever you play is kept on the device."             ""             "Debug-signed, so Android will call the developer unknown. That is expected"             "until the project has a release keystore.")
-          # Recreate the rolling release so the tag always points at this commit.
-          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
-          gh release create latest sabeel.apk             --title "Latest build"             --notes "$NOTES"             --prerelease             --target "$GITHUB_SHA"
+          # Update in place when the release already exists. Deleting and
+          # recreating it would churn the tag, briefly 404 the download link
+          # people may have bookmarked, and reset the download count.
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest sabeel.apk --clobber
+            gh release edit latest --notes "$NOTES" --prerelease
+          else
+            gh release create latest sabeel.apk               --title "Latest build"               --notes "$NOTES"               --prerelease               --target "$GITHUB_SHA"
+          fi
 
       - name: Publish release
         if: github.ref_type == 'tag'
