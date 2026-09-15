@@ -57,30 +57,32 @@ export default function DuaCategory() {
                 </p>
               )}
 
-              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line/60">
-                {d.source ? (
-                  <span className="text-[11px] text-muted flex items-center gap-1.5 flex-1 min-w-0">
-                    <Icon name="book" size={12} className="shrink-0" />
-                    <span className="truncate">{d.source}</span>
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-amber-500 flex items-center gap-1.5 flex-1 min-w-0">
-                    <Icon name="warn" size={12} className="shrink-0" />
-                    <span className="truncate">No source recorded — verify before relying on it</span>
-                  </span>
-                )}
+              {/* Where an entry has no recorded source, nothing is shown in its place —
+                  no divider, no note. The footer only exists when it has something
+                  to carry. */}
+              {(d.source || target > 1) && (
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line/60">
+                  {d.source ? (
+                    <span className="text-[11px] text-muted flex items-center gap-1.5 flex-1 min-w-0">
+                      <Icon name="book" size={12} className="shrink-0" />
+                      <span className="truncate">{d.source}</span>
+                    </span>
+                  ) : (
+                    <span className="flex-1" />
+                  )}
 
-                {target > 1 && (
-                  <button
-                    onClick={() => tick(d.id, target)}
-                    className={`tap shrink-0 px-3 py-1.5 rounded-lg text-xs tabular-nums border transition-colors ${
-                      done >= target ? 'border-brand bg-brand/15 text-brand' : 'border-line text-muted'
-                    }`}
-                  >
-                    {done} / {target}
-                  </button>
-                )}
-              </div>
+                  {target > 1 && (
+                    <button
+                      onClick={() => tick(d.id, target)}
+                      className={`tap shrink-0 px-3 py-1.5 rounded-lg text-xs tabular-nums border transition-colors ${
+                        done >= target ? 'border-brand bg-brand/15 text-brand' : 'border-line text-muted'
+                      }`}
+                    >
+                      {done} / {target}
+                    </button>
+                  )}
+                </div>
+              )}
             </Card>
           )
         })}

@@ -6,6 +6,15 @@ export function Screen({ children, className = '' }) {
   return <div className={`min-h-full pb-24 ${className}`}>{children}</div>
 }
 
+// An Arabic honorific sitting inside an English sentence — "the Prophet ﷺ" — is a
+// right-to-left run, and the bidi algorithm hands the neutral characters beside
+// it to that run too. "the Prophet ﷺ · 5 entries" then renders with the count
+// jumping to the wrong side. Wrapping each Arabic run in an isolate tells the
+// algorithm it is a self-contained island and leaves the rest of the line alone.
+const ARABIC_RUN = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]+/g
+const isolate = v =>
+  typeof v === 'string' ? v.replace(ARABIC_RUN, m => `⁨${m}⁩`) : v
+
 export function Header({ title, subtitle, back, actions, sticky = true, large = false }) {
   const nav = useNavigate()
   return (
@@ -17,8 +26,8 @@ export function Header({ title, subtitle, back, actions, sticky = true, large = 
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <div className={`truncate font-semibold ${large ? 'text-lg' : 'text-[15px]'}`}>{title}</div>
-          {subtitle && <div className="truncate text-xs text-muted">{subtitle}</div>}
+          <div className={`truncate font-semibold ${large ? 'text-lg' : 'text-[15px]'}`}>{isolate(title)}</div>
+          {subtitle && <div className="truncate text-xs text-muted">{isolate(subtitle)}</div>}
         </div>
         {actions}
       </div>

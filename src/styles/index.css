@@ -53,7 +53,12 @@ body {
   margin: 0;
   background: rgb(var(--c-bg));
   color: rgb(var(--c-ink));
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* The Arabic faces are listed last so that the honorifics that appear inside
+     English sentences — the ﷺ after the Prophet's name, ۩ for a sajdah — have a
+     font that actually contains them. System UI faces do not, and the browser
+     otherwise draws a tofu box and reorders the line around it. */
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif,
+               var(--font-arabic), 'Scheherazade New', 'Noto Naskh Arabic';
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }

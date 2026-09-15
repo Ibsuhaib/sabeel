@@ -71,6 +71,17 @@ async function main() {
   const rukuOf = assign(order, RUKU_START)
   const manzilOf = assign(order, MANZIL_START)
 
+
+// The upstream Uthmani text separates a tanwīn from the alif that carries it
+// (“أَندَادً ا” for أَندَادًا) and leaves stray direction marks in about 820
+// ayahs. Both are encoding artifacts, not orthography: a lone alif is never a
+// word, so closing that gap restores the word the muṣḥaf actually prints.
+const tidyArabic = t => t
+  .replace(/([ًࣰٌࣱٍࣲ]) (ا)(?![؀-ۿ])/g, '$1$2')
+  .replace(/[‎‏]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+
   let total = 0
   const index = []
   for (const s of surahs) {
@@ -81,7 +92,7 @@ async function main() {
       if (!ar) throw new Error(`missing Arabic for ${k}`)
       const ayah = {
         v,
-        ar,
+        ar: tidyArabic(ar),
         en: loaded.en.get(k) || '',
         e2: loaded.en2.get(k) || '',
         tr: loaded.tr.get(k) || '',

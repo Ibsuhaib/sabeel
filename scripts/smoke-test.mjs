@@ -228,7 +228,8 @@ check('hadith book files match the index shape the pages destructure', () => {
 
 check('dua index and every category load', () => {
   const idx = read('dua/index.json')
-  assert(Array.isArray(idx.categories) && idx.categories.length === 5, 'expected 5 dua categories')
+  assert(Array.isArray(idx.categories) && idx.categories.length >= 11,
+    `expected at least 11 dua categories, got ${idx.categories?.length}`)
   for (const c of idx.categories) {
     assert(exists(`dua/${c.slug}.json`), `dua/${c.slug}.json missing`)
     const cat = read(`dua/${c.slug}.json`)
@@ -240,6 +241,32 @@ check('dua index and every category load', () => {
       assert(it.ar.trim(), `${c.slug}/${it.id} has empty Arabic`)
     }
   }
+})
+
+// Anything we built ourselves carries a pointer back to the muṣḥaf or the hadith
+// corpus. If that pointer is there, a human-readable reference must be printed
+// with it — an entry citing nothing is allowed, an entry citing a phantom is not.
+check('every built dua entry cites what it was taken from', () => {
+  const idx = read('dua/index.json')
+  let built = 0
+  for (const c of idx.categories) {
+    for (const it of read(`dua/${c.slug}.json`).items) {
+      if (!it.quran && !it.hadith) continue
+      built++
+      assert(it.source && it.source.trim(), `${c.slug}/${it.id} has a ref but no source line`)
+      if (it.quran) {
+        assert(it.source.startsWith('Quran'), `${c.slug}/${it.id} quran ref with non-Quran source`)
+        const { surah: s, from, to } = it.quran
+        assert(s >= 1 && s <= 114 && from >= 1 && to >= from, `${c.slug}/${it.id} impossible ayah range`)
+      }
+      if (it.hadith) {
+        assert(exists(`hadith/index.json`), 'hadith index missing')
+        assert(Number.isInteger(it.hadith.n) && it.hadith.n > 0, `${c.slug}/${it.id} bad hadith number`)
+        assert(it.source.includes(String(it.hadith.n)), `${c.slug}/${it.id} source text disagrees with its ref`)
+      }
+    }
+  }
+  assert(built >= 50, `expected the adhkar builder to have sourced 50+ entries, saw ${built}`)
 })
 
 check('99 Names are complete and numbered 1-99', () => {
