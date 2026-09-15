@@ -7,6 +7,26 @@ Useful, given away, expecting nothing back. That is what this app is meant to be
 
 ---
 
+## Download
+
+**[Download sabeel.apk for Android](https://github.com/Ibsuhaib/sabeel/releases/latest/download/sabeel.apk)** — or see [all releases](https://github.com/Ibsuhaib/sabeel/releases).
+
+That link always points at the newest build; every push to `main` replaces it.
+Open the file on your phone and Android will ask, the first time, whether to
+allow installing from your browser or file manager — it says that because the
+app does not come from the Play Store, not because anything is wrong with it.
+It is debug-signed for the same reason, so Android will also call the developer
+unknown until the project has a release keystore.
+
+Everything is inside the app: the Quran with the muṣḥaf page layout, all 36,512
+hadith, the duas, prayer calculation, the adhan and the fonts. Only recitation
+streams, and whatever you play is kept on the device.
+
+There is nothing to install for the web version — open it in a browser and use
+*Add to Home Screen*.
+
+---
+
 ## Founding principles
 
 These are not marketing copy. They are constraints on what may be merged.
