@@ -68,10 +68,16 @@ export default function SurahReader() {
   }, [data, params])
 
   useEffect(() => {
+    // Recitation rolls on past the end of a surah, so the reader follows it there
+    // rather than being left behind on a surah that is no longer sounding.
+    if (audio.playing && audio.surah && audio.surah !== num) {
+      nav(`/quran/${audio.surah}`, { replace: true })
+      return
+    }
     if (!audio.playing || audio.ayah == null || audio.surah !== num) return
     const id = audio.ayah === BASMALA_AYAH ? 'ayah-basmala' : `ayah-${audio.ayah}`
     document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [audio.ayah, audio.playing, audio.surah, num])
+  }, [audio.ayah, audio.playing, audio.surah, num, nav])
 
   // One scroll handler feeds both the resume position and the play-from point.
   useEffect(() => {

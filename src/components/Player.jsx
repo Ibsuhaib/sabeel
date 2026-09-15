@@ -184,15 +184,22 @@ function PlayerSheet({ open, onClose, state: s, catalogue, ayahCount, surahName,
             options={SPEEDS.map(v => ({ id: v, label: `${v}×` }))}
           />
 
-          {!isSurahMode && (
-            <div className="mt-4 border-t border-line">
+          <div className="mt-4 border-t border-line">
+            {!isSurahMode && (
               <Toggle
                 checked={s.autoAdvance} onChange={v => player.setAutoAdvance(v)}
                 label="Continue to the next ayah"
                 hint="Turn off to stop at the end of each ayah"
               />
-            </div>
-          )}
+            )}
+            <Toggle
+              checked={s.continuous} onChange={v => player.setContinuous(v)}
+              label="Continue to the next surah"
+              hint={s.range
+                ? 'A repeat range is set, so playback stays inside it'
+                : 'Keep reciting past the end of this surah'}
+            />
+          </div>
         </div>
       )}
 

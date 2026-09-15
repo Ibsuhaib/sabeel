@@ -9,6 +9,8 @@
 // Nothing is hosted by us. Files stream and the service worker caches what has
 // actually been played.
 
+import { quranMeta } from './data.js'
+
 const EVERY_AYAH = 'https://everyayah.com/data'
 
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -39,6 +41,23 @@ export function surahUrl(reciter, surah) {
   return `${reciter.server}/${String(surah).padStart(3, '0')}.mp3`
 }
 
+// Ayah counts for all 114 surahs, so that finishing one surah can roll into the
+// next without whoever pressed play having to know how long anything is. Loaded
+// once from the muṣḥaf metadata the app already ships, and primed on play so it
+// is in hand well before the last ayah of the surah arrives.
+let lengths = null
+let lengthsPromise = null
+
+function primeLengths() {
+  if (lengths || lengthsPromise) return lengthsPromise
+  lengthsPromise = quranMeta()
+    .then(m => { lengths = Object.fromEntries(m.surahs.map(x => [x.n, x.ayahs])) })
+    .catch(() => { lengths = {} })
+  return lengthsPromise
+}
+
+const lengthOf = n => (lengths ? lengths[n] : null) || null
+
 const initial = {
   reciter: null,
   surah: null,
@@ -54,6 +73,7 @@ const initial = {
   played: 0,
   range: null,         // { from, to } — loop this span of ayahs
   autoAdvance: true,   // continue into the next ayah when one finishes
+  continuous: true,    // and on into the next surah when one finishes
   delay: 0,            // seconds of silence before the next ayah
   waiting: false       // sitting in that silence right now
 }
@@ -107,6 +127,7 @@ function onEnded() {
       return
     }
     state.played = 0
+    if (state.continuous && state.surah < 114) { startSurah(state.surah + 1); return }
     state.playing = false
     emit()
     return
@@ -133,9 +154,17 @@ function onEnded() {
   if (!state.autoAdvance) { state.playing = false; emit(); return }
 
   const next = state.ayah + 1
+  const endOfSurah = state.lastAyah && next > state.lastAyah
   const target = (state.range && next > state.range.to) ? state.range.from
-    : (state.lastAyah && next > state.lastAyah) ? null
+    : endOfSurah ? null
     : next
+
+  // A range is an explicit instruction to stay put, so it wins; otherwise the end
+  // of a surah is just a boundary to cross, the way it is when reading.
+  if (target == null && endOfSurah && !state.range && state.continuous && state.surah < 114) {
+    startSurah(state.surah + 1)
+    return
+  }
 
   if (target == null) { state.playing = false; emit(); return }
 
@@ -152,6 +181,24 @@ function onEnded() {
     return
   }
   load(state.surah, target)
+}
+
+// Move playback to the start of a surah: its basmala where it has one, and its
+// own ayah count, so the next boundary is known before it is reached.
+function startSurah(n) {
+  state.lastAyah = lengthOf(n)
+  state.played = 0
+  const from = state.reciter?.mode !== 'surah' && hasBasmala(n) ? BASMALA_AYAH : 1
+
+  if (lengthOf(n)) { load(n, from); return }
+  // Metadata has not arrived yet — wait for it rather than playing a surah whose
+  // end we cannot detect, which would stop the run after one more surah.
+  state.loading = true
+  emit()
+  primeLengths().then(() => {
+    state.lastAyah = lengthOf(n)
+    load(n, from)
+  })
 }
 
 function load(surah, ayah, { autoplay = true } = {}) {
@@ -204,6 +251,7 @@ export const player = {
 
   play(surah, ayah = 1, lastAyah) {
     if (!state.reciter) return
+    primeLengths()
     if (lastAyah) state.lastAyah = lastAyah
     state.played = 0
     // Beginning a surah at its first ayah means beginning with the basmala.
@@ -224,6 +272,8 @@ export const player = {
     if (same && el?.src) { audio().play().catch(() => {}); return }
     this.play(surah, ayah, lastAyah)
   },
+
+  setContinuous(on) { state.continuous = !!on; emit() },
 
   pause() { clearTimeout(delayTimer); state.waiting = false; el?.pause(); emit() },
   resume() { el?.play().catch(() => {}) },
