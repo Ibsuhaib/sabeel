@@ -13,8 +13,9 @@
 // worker is what makes the rest possible: knowing precisely what is on the
 // device, reporting real progress, and deleting exactly one surah again.
 import { ayahUrl, surahUrl, basmalaUrl, hasBasmala } from './audio.js'
+import { AUDIO_CACHE } from './prefetch.js'
 
-export const AUDIO_CACHE = 'sabeel-audio'
+export { AUDIO_CACHE }
 
 const supported = () => typeof caches !== 'undefined'
 

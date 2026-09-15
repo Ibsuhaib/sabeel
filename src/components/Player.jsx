@@ -47,11 +47,17 @@ export default function Player() {
           <button onClick={() => setExpanded(true)} className="tap min-w-0 flex-1 text-left pr-2">
             <span className="block text-[13px] font-medium truncate">
               {surahName || `Surah ${s.surah}`}
-              {!isSurahMode && s.ayah ? ` · Ayah ${s.ayah}` : ''}
+              {!isSurahMode && s.ayah === 0
+                ? ' · Bismillah'
+                : !isSurahMode && s.ayah ? ` · Ayah ${s.ayah}` : ''}
             </span>
             <span className="block text-[11px] text-muted truncate">
               {s.error
                 ? <span className="text-amber-500">{s.error}</span>
+                : s.buffering
+                  ? <span className="text-gold">
+                      Fetching the surah — {s.buffering.done} of {s.buffering.total} ayahs
+                    </span>
                 : s.waiting
                   ? <span className="text-gold">Pausing before the next ayah…</span>
                   : <>
@@ -199,6 +205,13 @@ function PlayerSheet({ open, onClose, state: s, catalogue, ayahCount, surahName,
                 ? 'A repeat range is set, so playback stays inside it'
                 : 'Keep reciting past the end of this surah'}
             />
+            {!isSurahMode && (
+              <Toggle
+                checked={s.preloadSurah} onChange={v => player.setPreloadSurah(v)}
+                label="Fetch the whole surah first"
+                hint="Waits until every ayah is on the device before starting. Only worth it on a connection too slow to keep up — a few ayahs are always fetched ahead anyway."
+              />
+            )}
           </div>
         </div>
       )}

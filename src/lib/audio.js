@@ -10,8 +10,12 @@
 // actually been played.
 
 import { quranMeta } from './data.js'
+import { warm } from './prefetch.js'
 
 const EVERY_AYAH = 'https://everyayah.com/data'
+
+// How many ayahs beyond the buffered element to pull into the cache.
+const LOOKAHEAD = 4
 
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 export const REPEATS = [1, 2, 3, 5, 7, 10, Infinity]
@@ -75,45 +79,68 @@ const initial = {
   autoAdvance: true,   // continue into the next ayah when one finishes
   continuous: true,    // and on into the next surah when one finishes
   delay: 0,            // seconds of silence before the next ayah
-  waiting: false       // sitting in that silence right now
+  waiting: false,      // sitting in that silence right now
+  preloadSurah: false, // fetch the whole surah before the first ayah sounds
+  buffering: null      // { done, total } while that is happening
 }
 
 let state = { ...initial }
-let el = null
+
+// Two elements, not one. A single <audio> has to take a new src, decode it and
+// start again between every ayah, and that pause is audible even when the file
+// is already on the device. With a pair, the next ayah is loaded and decoded
+// while the current one is still playing, and the handover is a swap rather
+// than a load.
+let pair = null
+let active = 0
 let delayTimer = null
 const listeners = new Set()
+
+const el = () => (pair ? pair[active] : null)
+const spare = () => (pair ? pair[1 - active] : null)
 
 function emit() {
   const snapshot = { ...state }
   listeners.forEach(fn => fn(snapshot))
 }
 
-function audio() {
-  if (el) return el
-  el = new Audio()
-  el.preload = 'auto'
+function build() {
+  const a = new Audio()
+  a.preload = 'auto'
+  // Only the element actually playing may drive the UI. The other one is busy
+  // loading the next ayah, and its events would otherwise report its progress
+  // as though it were the recitation you can hear.
+  const live = () => a === el()
 
-  el.addEventListener('play', () => { state.playing = true; state.error = null; emit() })
-  el.addEventListener('pause', () => { state.playing = false; emit() })
-  el.addEventListener('waiting', () => { state.loading = true; emit() })
-  el.addEventListener('playing', () => { state.loading = false; emit() })
-  el.addEventListener('loadedmetadata', () => {
-    state.duration = el.duration || 0
+  a.addEventListener('play', () => { if (live()) { state.playing = true; state.error = null; emit() } })
+  a.addEventListener('pause', () => { if (live()) { state.playing = false; emit() } })
+  a.addEventListener('waiting', () => { if (live()) { state.loading = true; emit() } })
+  a.addEventListener('playing', () => { if (live()) { state.loading = false; emit() } })
+  a.addEventListener('loadedmetadata', () => {
+    if (!live()) return
+    state.duration = a.duration || 0
     state.loading = false
     emit()
   })
-  el.addEventListener('timeupdate', () => {
-    state.time = el.currentTime || 0
+  a.addEventListener('timeupdate', () => {
+    if (!live()) return
+    state.time = a.currentTime || 0
     emit()
   })
-  el.addEventListener('error', () => {
+  a.addEventListener('error', () => {
+    if (!live()) return
     state.loading = false
     state.playing = false
     state.error = 'Could not load this recitation. Check your connection, or try another reciter.'
     emit()
   })
-  el.addEventListener('ended', onEnded)
-  return el
+  a.addEventListener('ended', () => { if (live()) onEnded() })
+  return a
+}
+
+function audio() {
+  if (!pair) pair = [build(), build()]
+  return el()
 }
 
 function onEnded() {
@@ -121,8 +148,8 @@ function onEnded() {
     // A whole surah just finished. Repeat it, or stop.
     if (state.played + 1 < state.repeat) {
       state.played++
-      el.currentTime = 0
-      el.play().catch(() => {})
+      el().currentTime = 0
+      el().play().catch(() => {})
       emit()
       return
     }
@@ -144,8 +171,8 @@ function onEnded() {
   // Per-ayah: repeat this ayah first.
   if (state.played + 1 < state.repeat) {
     state.played++
-    el.currentTime = 0
-    el.play().catch(() => {})
+    el().currentTime = 0
+    el().play().catch(() => {})
     emit()
     return
   }
@@ -201,28 +228,126 @@ function startSurah(n) {
   })
 }
 
+// The file for a position, whatever kind of reciter is selected.
+function urlFor(surah, ayah) {
+  if (!state.reciter || !surah) return null
+  if (state.reciter.mode === 'surah') return surahUrl(state.reciter, surah)
+  return ayah === BASMALA_AYAH ? basmalaUrl(state.reciter) : ayahUrl(state.reciter, surah, ayah)
+}
+
+// Where playback will be after this position, for preloading. Mirrors the rules
+// in onEnded — a repeat stays put, a range wraps, a surah rolls into the next —
+// so the element being warmed is the one that will actually be needed.
+function nextPosition(surah, ayah) {
+  if (!state.reciter) return null
+  if (state.reciter.mode === 'surah') {
+    return state.continuous && surah < 114 ? { surah: surah + 1, ayah: 1 } : null
+  }
+  if (ayah === BASMALA_AYAH) return { surah, ayah: 1 }
+  if (state.repeat > 1) return { surah, ayah }              // it will play again
+  if (!state.autoAdvance) return null
+
+  const next = ayah + 1
+  if (state.range && next > state.range.to) return { surah, ayah: state.range.from }
+  if (state.lastAyah && next > state.lastAyah) {
+    if (state.range || !state.continuous || surah >= 114) return null
+    const n = surah + 1
+    return { surah: n, ayah: hasBasmala(n) ? BASMALA_AYAH : 1 }
+  }
+  return { surah, ayah: next }
+}
+
+// Load the element that is *not* playing with whatever comes next, and warm a
+// few more into the cache behind it. The element does the decoding ahead of
+// time; the cache covers the case where the run gets ahead of the buffer.
+function primeNext(surah, ayah) {
+  const sp = spare()
+  if (!sp) return
+
+  const at = nextPosition(surah, ayah)
+  const url = at && urlFor(at.surah, at.ayah)
+  if (url && sp.dataset.url !== url) {
+    sp.dataset.url = url
+    sp.src = url
+    sp.playbackRate = state.speed
+    try { sp.load() } catch { /* some browsers reject an early load; harmless */ }
+  }
+
+  // Warm further ahead than the single buffered element, so a fast reciter or a
+  // run of very short ayahs does not outpace it.
+  if (state.reciter?.mode !== 'surah' && at) {
+    const ahead = []
+    let cur = at
+    for (let i = 0; i < LOOKAHEAD && cur; i++) {
+      cur = nextPosition(cur.surah, cur.ayah)
+      const u = cur && urlFor(cur.surah, cur.ayah)
+      if (u) ahead.push(u)
+    }
+    if (ahead.length) warm(ahead)
+  }
+}
+
+// Pull every ayah of a surah into the cache, then start. Progress is reported on
+// the player state so the UI can show it rather than appearing to have hung.
+async function preloadWholeSurah(surah, count, from) {
+  const urls = []
+  if (hasBasmala(surah)) urls.push(basmalaUrl(state.reciter))
+  for (let v = 1; v <= count; v++) urls.push(ayahUrl(state.reciter, surah, v))
+
+  state.buffering = { done: 0, total: urls.length }
+  state.loading = true
+  emit()
+
+  // In chunks, so the count moves and a slow connection still shows progress.
+  const CHUNK = 6
+  for (let i = 0; i < urls.length; i += CHUNK) {
+    if (state.buffering == null) return            // cancelled by another action
+    await warm(urls.slice(i, i + CHUNK))
+    state.buffering = { done: Math.min(i + CHUNK, urls.length), total: urls.length }
+    emit()
+  }
+
+  state.buffering = null
+  const start = (from === 1 && hasBasmala(surah)) ? BASMALA_AYAH : from
+  load(surah, start)
+}
+
 function load(surah, ayah, { autoplay = true } = {}) {
   // Every transport control routes through here, so this is the one place that
   // needs to know a reciter has actually been chosen. Without it, pressing next
   // before the catalogue has loaded throws.
   if (!state.reciter || !surah) return
-  const a = audio()
+  audio()
+
+  const url = urlFor(surah, ayah)
+  const sp = spare()
+
+  // If the spare was primed with exactly this file, it is already decoded and
+  // ready — swap to it rather than loading the same thing again. This is what
+  // removes the catch between ayahs.
+  if (url && sp && sp.dataset.url === url && sp.readyState >= 2) {
+    el()?.pause()
+    active = 1 - active
+  } else {
+    const a = el()
+    a.dataset.url = url || ''
+    a.src = url || ''
+  }
+
+  const a = el()
   state.surah = surah
   state.ayah = ayah
   state.time = 0
-  state.duration = 0
-  state.loading = true
+  state.duration = a.duration && Number.isFinite(a.duration) ? a.duration : 0
+  state.loading = a.readyState < 2
   state.error = null
-
-  a.src = state.reciter.mode === 'surah'
-    ? surahUrl(state.reciter, surah)
-    : ayah === BASMALA_AYAH
-      ? basmalaUrl(state.reciter)
-      : ayahUrl(state.reciter, surah, ayah)
+  a.currentTime = 0
   a.playbackRate = state.speed
 
   if (autoplay) a.play().catch(() => { state.playing = false; state.loading = false; emit() })
   emit()
+
+  primeNext(surah, ayah)
 }
 
 export const player = {
@@ -254,6 +379,18 @@ export const player = {
     primeLengths()
     if (lastAyah) state.lastAyah = lastAyah
     state.played = 0
+
+    // Fetch the surah in full before anything sounds. Off by default: it trades
+    // a gap between ayahs — which buffering ahead already removes — for a wait
+    // before the first word, and that wait is minutes for a long surah. Worth
+    // having for a connection too poor to stay ahead of the reciter.
+    if (state.preloadSurah && state.reciter.mode !== 'surah') {
+      const count = lastAyah || state.lastAyah || lengthOf(surah)
+      if (count) {
+        preloadWholeSurah(surah, count, ayah)
+        return
+      }
+    }
     // Beginning a surah at its first ayah means beginning with the basmala.
     // Starting part-way through does not — you are resuming mid-surah, and an
     // opening formula there would be wrong.
@@ -269,19 +406,21 @@ export const player = {
     const same = state.surah === surah &&
       (state.reciter.mode === 'surah' || state.ayah === ayah || atBasmalaFor)
     if (same && state.playing) { audio().pause(); return }
-    if (same && el?.src) { audio().play().catch(() => {}); return }
+    if (same && el()?.src) { audio().play().catch(() => {}); return }
     this.play(surah, ayah, lastAyah)
   },
 
   setContinuous(on) { state.continuous = !!on; emit() },
 
-  pause() { clearTimeout(delayTimer); state.waiting = false; el?.pause(); emit() },
-  resume() { el?.play().catch(() => {}) },
+  setPreloadSurah(on) { state.preloadSurah = !!on; emit() },
+
+  pause() { clearTimeout(delayTimer); state.buffering = null; state.waiting = false; el()?.pause(); emit() },
+  resume() { el()?.play().catch(() => {}) },
 
   playPause() {
-    if (!el?.src) return
-    if (state.playing) el.pause()
-    else el.play().catch(() => {})
+    if (!el()?.src) return
+    if (state.playing) el().pause()
+    else el().play().catch(() => {})
   },
 
   next() {
@@ -306,14 +445,14 @@ export const player = {
 
   seek(seconds) {
     if (!el) return
-    el.currentTime = Math.max(0, Math.min(seconds, el.duration || seconds))
-    state.time = el.currentTime
+    el().currentTime = Math.max(0, Math.min(seconds, el().duration || seconds))
+    state.time = el().currentTime
     emit()
   },
 
   setSpeed(speed) {
     state.speed = speed
-    if (el) el.playbackRate = speed
+    if (pair) pair.forEach(a => { a.playbackRate = speed })
     emit()
   },
 
@@ -338,8 +477,8 @@ export const player = {
   stop() {
     clearTimeout(delayTimer)
     state.waiting = false
-    el?.pause()
-    if (el) el.removeAttribute('src')
+    el()?.pause()
+    if (pair) pair.forEach(a => { a.pause(); a.removeAttribute('src') })
     state = { ...initial, reciter: state.reciter, speed: state.speed }
     emit()
   }
