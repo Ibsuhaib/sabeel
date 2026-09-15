@@ -90,18 +90,45 @@ jobs:
         if: github.ref_type != 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
+          SIZE: ${{ steps.apk.outputs.size }}
         run: |
           cp "${{ steps.apk.outputs.path }}" sabeel.apk
-          NOTES=$(printf '%s
-'             "Newest build of Sabeel, from \`${GITHUB_SHA::7}\` on $(date -u '+%d %B %Y')."             ""             "**[Download sabeel.apk](https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/sabeel.apk)** — ${{ steps.apk.outputs.size }}"             ""             "Open it on your Android phone. The first time, Android will ask you to"             "allow installing from your browser or file manager, because this does not"             "come from the Play Store."             ""             "Everything is in the app already: the Quran with the muṣḥaf page layout,"             "all 36,512 hadith, the duas, prayer calculation, the adhan and the fonts."             "Only recitation streams, and whatever you play is kept on the device."             ""             "Debug-signed, so Android will call the developer unknown. That is expected"             "until the project has a release keystore.")
+
+          # A quoted heredoc, so nothing inside is expanded by the shell except
+          # what is deliberately substituted below. Building this with printf and
+          # backslash continuations is what broke the file last time.
+          cat > notes.md <<'NOTES'
+          Newest build of Sabeel, from COMMIT on BUILD_DATE.
+
+          **[Download sabeel.apk](https://github.com/REPO/releases/latest/download/sabeel.apk)** — SIZE_HERE
+
+          Open it on your Android phone. The first time, Android will ask you to
+          allow installing from your browser or file manager, because this does
+          not come from the Play Store.
+
+          Everything is in the app already: the Quran with the 604-page muṣḥaf
+          layout, all 36,512 hadith, the duas, prayer calculation, the adhans and
+          the fonts. Only recitation streams, and whatever you play is kept on
+          the device.
+
+          Debug-signed, so Android will call the developer unknown. That is
+          expected until the project has a release keystore.
+          NOTES
+
+          sed -i "s|COMMIT|${GITHUB_SHA::7}|; s|BUILD_DATE|$(date -u '+%d %B %Y')|; s|REPO|${GITHUB_REPOSITORY}|; s|SIZE_HERE|${SIZE}|" notes.md
+
           # Update in place when the release already exists. Deleting and
-          # recreating it would churn the tag, briefly 404 the download link
-          # people may have bookmarked, and reset the download count.
+          # recreating it would churn the tag, briefly 404 a download link
+          # someone may have bookmarked, and reset the download count.
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest sabeel.apk --clobber
-            gh release edit latest --notes "$NOTES" --prerelease
+            gh release edit latest --notes-file notes.md --prerelease
           else
-            gh release create latest sabeel.apk               --title "Latest build"               --notes "$NOTES"               --prerelease               --target "$GITHUB_SHA"
+            gh release create latest sabeel.apk \
+              --title "Latest build" \
+              --notes-file notes.md \
+              --prerelease \
+              --target "$GITHUB_SHA"
           fi
 
       - name: Publish release
