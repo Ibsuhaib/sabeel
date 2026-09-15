@@ -29,6 +29,11 @@ jobs:
           java-version: 21
 
       - uses: android-actions/setup-android@v3
+        with:
+          # The action's default package list includes the obsolete `tools`
+          # package, which no longer exists in the SDK repository and fails the
+          # whole step. Everything else Gradle needs it downloads itself.
+          packages: platform-tools
 
       - run: npm ci
 
