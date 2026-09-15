@@ -16,8 +16,7 @@ const COMPLETE_FRACTION = 0.25 // of the screen width
 const FLICK_VELOCITY = 0.45    // px per ms
 
 export default function SwipePager({
-  pageKey, onNext, onPrev, canNext = true, canPrev = true, className = '', children
-}) {
+  pageKey, onNext, onPrev, canNext = true, canPrev = true, className = '', children, fill}) {
   const [dx, setDx] = useState(0)
   const [animating, setAnimating] = useState(false)
   const [enter, setEnter] = useState(null)   // 'next' | 'prev' — direction we arrived from
@@ -112,6 +111,10 @@ export default function SwipePager({
       style={{ touchAction: 'pan-y' }}
     >
       <div
+        // The inner wrapper is a plain block by default, which silently breaks a
+        // height chain running through the pager. `fill` lets a caller that needs
+        // its child to be exactly the pager's height say so.
+        className={fill ? 'h-full' : undefined}
         style={{
           transform: `translate3d(${dx}px, 0, 0)`,
           transition: animating ? 'transform .2s cubic-bezier(.22,.61,.36,1)' : 'none',

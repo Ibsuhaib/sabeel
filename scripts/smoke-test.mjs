@@ -246,6 +246,37 @@ check('every adhan is installed under the name the app will ask for', () => {
   }
 })
 
+// The muṣḥaf view renders fifteen fixed lines per page from this data. If a page
+// is missing or malformed the view silently falls back to reflowed text, which
+// looks fine and is not what was asked for — so it is checked here.
+check('every muṣḥaf page has a line layout', () => {
+  const dir = path.join(DATA, 'quran', 'page')
+  assert(fs.existsSync(dir), 'quran/page is missing — run `npm run data:layout`')
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+  assert(files.length === 604, `expected 604 page layouts, found ${files.length}`)
+
+  let ayahLines = 0
+  for (const n of [1, 2, 50, 300, 604]) {
+    const p = read(`quran/page/${n}.json`)
+    assert(Array.isArray(p.lines) && p.lines.length === 15, `page ${n} has ${p.lines?.length} lines, expected 15`)
+    const ayah = p.lines.filter(l => l.type === 'ayah')
+    assert(ayah.length > 0, `page ${n} has no ayah lines`)
+    for (const l of ayah) {
+      assert(Array.isArray(l.w) && l.w.length, `page ${n} line ${l.n} has no words`)
+      assert(l.w.every(w => typeof w.t === 'string' || w.end != null), `page ${n} line ${l.n} has a malformed word`)
+    }
+    ayahLines += ayah.length
+  }
+  assert(ayahLines > 40, 'the sampled pages carry suspiciously few lines')
+
+  // at-Tawbah is the one surah with no basmala; nothing should claim otherwise.
+  for (const n of [187, 188]) {
+    if (!exists(`quran/page/${n}.json`)) continue
+    const p = read(`quran/page/${n}.json`)
+    assert(!p.lines.some(l => l.type === 'basmala' && l.s === 9), `page ${n} gives at-Tawbah a basmala`)
+  }
+})
+
 /* -------------------------------- Dua ----------------------------------- */
 
 check('dua index and every category load', () => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { pageAyahs, quranMeta } from '../lib/data.js'
+import { pageAyahs, quranMeta, pageLayout } from '../lib/data.js'
 import { useData } from '../lib/useData.js'
 import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
@@ -12,6 +12,7 @@ import { Loading, LoadError, Sheet, IconButton, Button, Choice } from '../compon
 import { ReciterList } from '../components/Player.jsx'
 import SwipePager from '../components/SwipePager.jsx'
 import SurahBanner from '../components/SurahBanner.jsx'
+import MushafPage from '../components/MushafPage.jsx'
 import { useReadingTimer } from '../lib/useReadingTimer.js'
 import Icon from '../components/Icon.jsx'
 
@@ -28,7 +29,13 @@ export default function Mushaf() {
   const { settings, set } = useSettings()
 
   const { data, error, retry } = useData(
-    () => Promise.all([pageAyahs(page), quranMeta()]).then(([p, meta]) => ({ ...p, meta })),
+    () => Promise.all([
+      pageAyahs(page),
+      quranMeta(),
+      // The line layout is what makes this a muṣḥaf page rather than reflowed
+      // text. If it is missing the page still renders, just without the breaks.
+      pageLayout(page).catch(() => null)
+    ]).then(([p, meta, layout]) => ({ ...p, meta, layout })),
     [page],
     { label: 'this page' }
   )
@@ -92,7 +99,7 @@ export default function Mushaf() {
   if (error) return <LoadError message={error} onRetry={retry} />
   if (!data) return <Loading label="Opening the muṣḥaf" />
 
-  const { page: info, ayahs, meta } = data
+  const { page: info, ayahs, meta, layout } = data
   const surahsOnPage = [...new Set(ayahs.map(a => a.surah))]
   const title = surahsOnPage.map(n => meta.surahs.find(s => s.n === n)?.en).join(' · ')
 
@@ -103,9 +110,14 @@ export default function Mushaf() {
     player.play(first.surah, first.v, surahInfo?.ayahs)
   }
 
+  const exact = Array.isArray(layout?.lines) && layout.lines.length > 0
+
   return (
-    <div className="min-h-full pb-36">
-      <header className="sticky top-0 z-30 safe-t bg-bg/92 backdrop-blur-md border-b border-line">
+    // A fixed-height column rather than a scrolling one: a muṣḥaf page is a
+    // page, and having to scroll to see the bottom of it is the thing that makes
+    // an app not feel like the book.
+    <div className={exact ? 'h-[100dvh] flex flex-col overflow-hidden' : 'min-h-full pb-36'}>
+      <header className="shrink-0 safe-t bg-bg/92 backdrop-blur-md border-b border-line">
         <div className="flex items-center gap-1 px-2 h-14">
           <IconButton name="back" label="Back to surah list" onClick={() => nav('/quran')} size={22} />
           <button onClick={() => setSheet('jump')} className="tap min-w-0 flex-1 text-center px-2">
@@ -127,8 +139,34 @@ export default function Mushaf() {
         canNext={page < TOTAL_PAGES}
         onPrev={() => go(-1)}
         onNext={() => go(1)}
-        className="px-4 pt-5"
+        className={exact ? 'flex-1 min-h-0 px-2 pt-2 pb-1' : 'px-4 pt-5'}
+        fill={exact}
       >
+        {exact ? (
+          <div className="h-full flex flex-col border border-gold/25 rounded-2xl px-2.5 py-2.5 bg-surf/40 overflow-hidden">
+            {/* Relative + absolute below, because the page must take its size
+                from this box and never the other way round: the lines are
+                nowrap, and in normal flow they would push the box wider than
+                the screen and take the whole fit calculation with them. */}
+            <div className="relative flex-1 min-h-0">
+              <MushafPage
+                page={page}
+                lines={layout.lines}
+                meta={meta}
+                audio={audio}
+                selected={selected}
+                onSelect={setSelected}
+                bookmarked={bookmarked}
+                playingBasmala={
+                  audio.playing && audio.ayah === BASMALA_AYAH ? audio.surah : null
+                }
+              />
+            </div>
+            <div className="shrink-0 pt-2 mt-1 border-t border-gold/20 text-center">
+              <span className="text-[11px] text-muted tabular-nums">{info.p}</span>
+            </div>
+          </div>
+        ) : (
         <div className="border border-gold/25 rounded-2xl px-4 py-6 bg-surf/40">
           <p className="ar" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
             {ayahs.map((a, i) => {
@@ -175,6 +213,7 @@ export default function Mushaf() {
             <span className="text-[11px] text-muted tabular-nums">{info.p}</span>
           </div>
         </div>
+        )}
       </SwipePager>
 
       {selected && (
@@ -197,7 +236,7 @@ export default function Mushaf() {
         />
       )}
 
-      <nav className="flex items-center justify-between gap-3 px-4 py-6">
+      <nav className={`flex items-center justify-between gap-3 px-4 ${exact ? 'py-1.5 shrink-0' : 'py-6'}`}>
         <Button variant="soft" size="sm" onClick={() => go(-1)} disabled={page <= 1}>
           <Icon name="forward" size={14} />Previous
         </Button>
@@ -209,9 +248,11 @@ export default function Mushaf() {
         </Button>
       </nav>
 
-      <p className="text-[11px] text-muted/60 text-center px-10 pb-4">
-        Swipe the page to turn it — left for the next, right to go back.
-      </p>
+      {!exact && (
+        <p className="text-[11px] text-muted/60 text-center px-10 pb-4">
+          Swipe the page to turn it — left for the next, right to go back.
+        </p>
+      )}
 
       <MushafBar
         onContents={() => setSheet('jump')}

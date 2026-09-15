@@ -32,7 +32,12 @@ export default defineConfig({
           {
             urlPattern: /\/data\/.*\.json$/,
             handler: 'CacheFirst',
-            options: { cacheName: 'sabeel-data', expiration: { maxEntries: 200 } }
+            // 604 muṣḥaf page layouts, 114 surahs, the dua sets and the hadith
+            // indexes. The old cap of 200 was set when there were far fewer, and
+            // would now evict pages as fast as they were read — which shows up
+            // as a muṣḥaf that only works offline for wherever you happened to
+            // be last.
+            options: { cacheName: 'sabeel-data', expiration: { maxEntries: 1200 } }
           },
           {
             urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/,

@@ -44,6 +44,10 @@ async function load(path) {
 /* ---------------------------------- Quran --------------------------------- */
 
 export const quranMeta = () => load('quran/meta.json')
+
+// Where every line of the printed page breaks. One small file per page, so the
+// muṣḥaf view fetches only the page being read.
+export const pageLayout = n => load(`quran/page/${n}.json`)
 export const surah = n => load(`quran/surah/${n}.json`)
 
 export async function surahInfo(n) {
