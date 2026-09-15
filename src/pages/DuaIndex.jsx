@@ -70,7 +70,7 @@ export default function DuaIndex() {
 
       {sections.map(s => (
         <Section key={s.title} title={s.title}>
-          <div className="grid grid-cols-2 gap-2.5 px-4">
+          <div className="grid grid-cols-2 gap-2.5 px-4 stagger">
             {s.items.map(c => <Tile key={c.slug} c={c} />)}
           </div>
         </Section>

@@ -5,11 +5,15 @@ import { Screen, Header, Loading, LoadError, Card, IconButton } from '../compone
 import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
 
+// Only worth a toggle if there is something behind it.
+const hasMore = d => Boolean(d.tr || d.en || d.benefits)
+
 export default function DuaCategory() {
   const { slug } = useParams()
   const { data: cat, error, retry } = useData(() => duaCategory(slug), [slug], { label: 'these duas' })
   const [counts, setCounts] = useState({})
   const [showArabicOnly, setShowArabicOnly] = useState(false)
+  const [open, setOpen] = useState({})
 
   if (error) return <LoadError message={error} onRetry={retry} />
   if (!cat) return <Loading />
@@ -34,7 +38,7 @@ export default function DuaCategory() {
         }
       />
 
-      <div className="px-4 pt-4 space-y-3">
+      <div className="px-4 pt-4 space-y-3 stagger">
         {cat.items.map(d => {
           const done = counts[d.id] || 0
           const target = d.count || 1
@@ -44,17 +48,35 @@ export default function DuaCategory() {
 
               <p className="ar ar-sm">{d.ar}</p>
 
-              {!showArabicOnly && (
-                <>
-                  {d.tr && <p className="text-[13px] text-muted italic mt-3 leading-relaxed">{d.tr}</p>}
-                  {d.en && <p className="translation mt-3 text-ink/85">{d.en}</p>}
-                </>
+              {/* The Arabic alone by default. With the transliteration, the
+                  translation and the note all open at once, a single entry fills
+                  the screen and finding the next one means scrolling past three
+                  paragraphs you may not want — so the rest is behind a toggle,
+                  and opening one leaves the others shut. */}
+              {!showArabicOnly && hasMore(d) && (
+                <button
+                  onClick={() => setOpen(o => ({ ...o, [d.id]: !o[d.id] }))}
+                  aria-expanded={!!open[d.id]}
+                  className="tap mt-3 flex items-center gap-1.5 text-[11px] text-muted hover:text-ink"
+                >
+                  <Icon
+                    name="forward" size={13}
+                    className={`transition-transform duration-200 ${open[d.id] ? 'rotate-90' : ''}`}
+                  />
+                  {open[d.id] ? 'Hide translation' : 'Translation & transliteration'}
+                </button>
               )}
 
-              {d.benefits && !showArabicOnly && (
-                <p className="text-xs text-muted mt-3 bg-bg border border-line rounded-xl px-3 py-2 leading-relaxed">
-                  <Icon name="info" size={12} className="inline mr-1.5 -mt-0.5" />{d.benefits}
-                </p>
+              {!showArabicOnly && open[d.id] && (
+                <div className="mt-3 space-y-3 anim-reveal">
+                  {d.tr && <p className="text-[13px] text-muted italic leading-relaxed">{d.tr}</p>}
+                  {d.en && <p className="translation text-ink/85">{d.en}</p>}
+                  {d.benefits && (
+                    <p className="text-xs text-muted bg-bg border border-line rounded-xl px-3 py-2 leading-relaxed">
+                      <Icon name="info" size={12} className="inline mr-1.5 -mt-0.5" />{d.benefits}
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Where an entry has no recorded source, nothing is shown in its place —

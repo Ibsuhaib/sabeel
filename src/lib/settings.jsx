@@ -3,10 +3,18 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 const KEY = 'sabeel.settings.v1'
 
 export const DEFAULTS = {
-  theme: 'dark',                 // light | dark | sepia | black
+  // Sepia by default. The first screen someone sees decides whether they open
+  // the app again, and warm paper is what a muṣḥaf looks like — a dark app is a
+  // preference, not a first impression.
+  theme: 'sepia',                // light | dark | sepia | black
+  iconStyle: 'duotone',          // line | bold | solid | duotone
   arabicFont: 'Amiri Quran',     // Amiri Quran | Scheherazade New | Noto Naskh Arabic
-  arabicSize: 30,
-  arabicLeading: 2.1,
+  // A medium default: 30px Arabic was set for a reading screen and is too big
+  // for a list of duas or a hadith, where it pushes everything else off the
+  // screen. 26 is comfortable to read without dominating, and the reader can
+  // still move it either way.
+  arabicSize: 26,
+  arabicLeading: 2,
   translationSize: 15,
   dyslexicFont: false,
   showTranslation: true,
@@ -39,6 +47,12 @@ export const DEFAULTS = {
     perPrayer: { fajr: 'adhan', dhuhr: 'adhan', asr: 'adhan', maghrib: 'adhan', isha: 'adhan' }
   },
   onboarded: false
+}
+
+/** The icon drawing the reader chose. Safe to call from anywhere an icon renders. */
+export function useIconStyle() {
+  const ctx = useContext(Ctx)
+  return ctx?.settings?.iconStyle || DEFAULTS.iconStyle
 }
 
 export const SOUND_MODES = ['adhan', 'beep', 'silent', 'off']

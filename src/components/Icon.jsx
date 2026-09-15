@@ -1,67 +1,53 @@
-// Inline SVG so there is no icon library in the bundle and no network request.
-const P = {
-  quran: 'M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v13H6a2 2 0 0 0-2 2V5Zm0 14a2 2 0 0 0 2 2h12M9 7h6M9 11h4',
-  hadith: 'M12 6.5S10 4 6 4H3v13h3c4 0 6 2.5 6 2.5m0-13S14 4 18 4h3v13h-3c-4 0-6 2.5-6 2.5m0-13v13',
-  prayer: 'M12 3v3m0 0a5 5 0 0 0-5 5v3h10v-3a5 5 0 0 0-5-5ZM4 20h16M6 17h12',
-  dua: 'M7 21c-1.5-2-2-4.5-2-7V7a1.5 1.5 0 0 1 3 0v4m0 0V5a1.5 1.5 0 0 1 3 0v6m0 0V6a1.5 1.5 0 0 1 3 0v5m0 0V9a1.5 1.5 0 0 1 3 0v5c0 3-1 5.5-2.5 7',
-  more: 'M5 12h.01M12 12h.01M19 12h.01',
-  home: 'M3 10.5 12 3l9 7.5M5.5 9v11h13V9',
-  search: 'M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm6-2 4 4',
-  back: 'm14 6-6 6 6 6',
-  forward: 'm10 6 6 6-6 6',
-  close: 'm6 6 12 12M18 6 6 18',
-  play: 'M7 4.5v15l13-7.5z',
-  pause: 'M8 4v16M16 4v16',
-  bookmark: 'M6 3h12v18l-6-4.5L6 21V3Z',
-  settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14V14a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 7a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 17 4.6a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 10h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z',
-  compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-12.5-2 5.5-5.5 2 2-5.5z',
-  calendar: 'M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z',
-  check: 'm5 13 4 4L19 7',
-  chart: 'M4 20V10m5 10V4m5 16v-7m5 7V8',
-  calc: 'M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm2 4h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01',
-  counter: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3 2',
-  sunrise: 'M12 4v4m-6 6a6 6 0 0 1 12 0M3 18h18M5.6 8.6l1.4 1.4m10-1.4-1.4 1.4M2 14h2m16 0h2',
-  sunset: 'M12 10V4m-6 10a6 6 0 0 1 12 0M3 18h18M5.6 8.6l1.4 1.4m10-1.4-1.4 1.4',
-  book: 'M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4V4Zm16 0h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6V4Z',
-  heart: 'M12 20s-7.5-4.6-9.3-9A5.2 5.2 0 0 1 12 6.6a5.2 5.2 0 0 1 9.3 4.4C19.5 15.4 12 20 12 20Z',
-  shield: 'M12 3l7.5 3v5.5c0 4.3-3 8.2-7.5 9.5-4.5-1.3-7.5-5.2-7.5-9.5V6L12 3Z',
-  kaaba: 'M12 3 4.5 6.2v11.6L12 21l7.5-3.2V6.2L12 3Zm0 0v18M4.5 6.2 12 9.4l7.5-3.2M4.5 10.5h15',
-  bell: 'M12 3a5.5 5.5 0 0 0-5.5 5.5c0 3.5-1 5-1.8 5.8a.7.7 0 0 0 .5 1.2h13.6a.7.7 0 0 0 .5-1.2c-.8-.8-1.8-2.3-1.8-5.8A5.5 5.5 0 0 0 12 3Zm-2.2 15.5a2.2 2.2 0 0 0 4.4 0',
-  bellOff: 'M12 3a5.5 5.5 0 0 0-5.5 5.5c0 3.5-1 5-1.8 5.8a.7.7 0 0 0 .5 1.2h13.6a.7.7 0 0 0 .5-1.2c-.8-.8-1.8-2.3-1.8-5.8A5.5 5.5 0 0 0 12 3Zm-2.2 15.5a2.2 2.2 0 0 0 4.4 0M4 3l16 18',
-  chime: 'M5 10v4m4-7v10m4-12v14m4-10v6m4-4v2',
-  dawn: 'M3 18h18M6.5 18a5.5 5.5 0 0 1 11 0M12 3.5v2m-6 1 1.4 1.4M18 7.5 16.6 8.9M2.5 13h2m15 0h2',
-  sun: 'M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8',
-  sunLow: 'M12 17a5 5 0 0 1 0-10 5 5 0 0 1 0 10ZM3 20h18M18.5 6.5 20 5M12 3v1.5M5.5 6.5 4 5',
-  mute: 'M11 5 6.5 9H3v6h3.5L11 19V5Zm5 4 5 6m0-6-5 6',
-  download: 'M12 3v12m0 0-4-4m4 4 4-4M4 19h16',
-  share: 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3m0 0L8 7m4-4 4 4',
-  copy: 'M9 9h10v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V9Zm-3 6H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1',
-  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-9v5m0-8h.01',
-  warn: 'M12 9v5m0 3h.01M10.3 3.9 2.4 17.3A2 2 0 0 0 4.1 20.4h15.8a2 2 0 0 0 1.7-3.1L13.7 3.9a2 2 0 0 0-3.4 0Z',
-  location: 'M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Zm0-8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
-  moon: 'M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z',
-  star: 'm12 3 2.7 5.8 6.3.8-4.6 4.3 1.2 6.1L12 17l-5.6 3 1.2-6.1L3 9.6l6.3-.8L12 3Z',
-  plus: 'M12 5v14M5 12h14',
-  minus: 'M5 12h14',
-  reset: 'M4 10a8 8 0 1 1 1 5M4 5v5h5',
-  filter: 'M4 5h16l-6 7v6l-4 2v-8L4 5Z',
-  note: 'M5 4h11l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3 7h8m-8 4h5',
-  flag: 'M5 21V4m0 0h11l-2 4 2 4H5',
-  bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
-  autoscroll: 'M7 5l5 5 5-5M7 13l5 5 5-5',
-  menu: 'M4 7h16M4 12h16M4 17h16'
+import SET from '../generated/icons.json'
+import { useIconStyle } from '../lib/settings.jsx'
+
+// The app's icons: Phosphor Icons (MIT), fetched and baked by
+// scripts/fetch-icons.mjs. See that file for why they are no longer drawn here.
+//
+// Phosphor draws each icon in several weights from one underlying geometry,
+// which is what makes a choice of icon style possible without maintaining four
+// separate drawings of everything. The reader's choice maps to a weight:
+//
+//   Line     regular   an even stroke, quiet
+//   Bold     bold      heavier, easier to pick out at a glance
+//   Solid    fill      filled silhouettes
+//   Duotone  duotone   filled, with a second layer at low opacity for depth
+//
+// Everything is on a 256 viewBox and filled with currentColor, so an icon takes
+// its colour from whatever it sits in, exactly as the old stroked set did.
+
+const STYLE_TO_WEIGHT = {
+  line: 'regular',
+  bold: 'bold',
+  solid: 'fill',
+  duotone: 'duotone'
 }
 
-export default function Icon({ name, size = 20, className = '', strokeWidth = 1.6, fill = 'none' }) {
-  const d = P[name]
-  if (!d) return null
+// The one shape no general icon set has. Drawn on the same 256 grid as the rest
+// so it carries the same visual weight beside them.
+const LOCAL = {
+  kaaba: [{ d: 'M128 24a8 8 0 0 0-3.1.6l-72 30A8 8 0 0 0 48 62v132a8 8 0 0 0 4.9 7.4l72 30a8 8 0 0 0 6.2 0l72-30a8 8 0 0 0 4.9-7.4V62a8 8 0 0 0-4.9-7.4l-72-30A8 8 0 0 0 128 24Zm0 16.7L185.2 64 128 87.9 70.8 64ZM64 75.9l56 23.4v112.8l-56-23.3Zm72 136.2V99.3l56-23.4v112.9Z' }]
+}
+
+export default function Icon({ name, size = 20, className = '', style }) {
+  const chosen = style || useIconStyle()
+  const weight = STYLE_TO_WEIGHT[chosen] || 'regular'
+
+  const entry = SET.icons[name]
+  // Fall back to the regular weight, then to a local drawing, rather than
+  // rendering nothing — a missing icon leaves a button with no face on it.
+  const paths = entry?.[weight] || entry?.regular || LOCAL[name]
+  if (!paths) return null
+
   return (
     <svg
-      width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
-      fill={fill} stroke="currentColor" strokeWidth={strokeWidth}
-      strokeLinecap="round" strokeLinejoin="round" className={className}
+      width={size} height={size} viewBox={`0 0 ${SET.viewBox} ${SET.viewBox}`}
+      fill="currentColor" aria-hidden="true" className={className}
     >
-      {d.split(' M').map((seg, i) => <path key={i} d={i === 0 ? seg : 'M' + seg} />)}
+      {/* Sunset is sunrise mirrored, so the two ends of the day are not one glyph. */}
+      <g transform={entry?.flip ? `translate(${SET.viewBox} 0) scale(-1 1)` : undefined}>
+        {paths.map((p, i) => <path key={i} d={p.d} opacity={p.o ?? undefined} />)}
+      </g>
     </svg>
   )
 }

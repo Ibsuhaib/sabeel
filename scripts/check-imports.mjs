@@ -47,7 +47,16 @@ for (const file of sources(path.join(ROOT, 'src'))) {
 
   // Strip the import statements before looking for usage, or a module path like
   // '../components/Player.jsx' reads as a use of `Player`.
-  const body = src.replace(/^\s*import\s[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
+  // Comments are stripped before the usage scan. Naming a file in prose —
+  // "the stroked set lives in Icon.jsx" — otherwise reads as `Icon.` being used
+  // as a member expression, and the check fails on a sentence.
+  //
+  // The line-comment pattern ignores `//` preceded by a colon so that a URL in a
+  // string is left alone; mangling one could only ever hide a real usage.
+  const body = src
+    .replace(/^\s*import\s[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
 
   for (const id of WATCHED) {
     const usedAsJsx = new RegExp(`<${id}[\\s/>]`).test(body)

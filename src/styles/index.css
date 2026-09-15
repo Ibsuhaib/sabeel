@@ -143,3 +143,60 @@ button, a[href], [role='button'], select, summary {
   border: 1px solid rgb(var(--c-gold) / .5); color: rgb(var(--c-gold));
   vertical-align: middle; margin-inline: .25em; font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------- movement ----------------------------------- */
+
+/* Motion here is meant to explain, not to decorate: a thing that appears slides
+   a little from where it came from, a thing you pressed answers immediately, a
+   list arrives in order rather than all at once. Anything that would still be
+   moving when you want to read it is too slow.
+
+   All of it is switched off for anyone who has asked their device for less
+   motion — that setting is a statement about headaches, not a preference. */
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1 }
+  50%      { opacity: .55 }
+}
+
+.anim-reveal { animation: reveal .18s ease-out both; }
+.anim-rise   { animation: rise .26s cubic-bezier(.22,.61,.36,1) both; }
+.anim-fade   { animation: fade .2s ease-out both; }
+.anim-pulse  { animation: pulseSoft 2s ease-in-out infinite; }
+
+/* A list that arrives in order reads as one movement rather than a scatter.
+   Capped at ten so a long list does not have items still arriving a second in. */
+.stagger > * { animation: rise .3s cubic-bezier(.22,.61,.36,1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms }
+.stagger > *:nth-child(2) { animation-delay: 28ms }
+.stagger > *:nth-child(3) { animation-delay: 56ms }
+.stagger > *:nth-child(4) { animation-delay: 84ms }
+.stagger > *:nth-child(5) { animation-delay: 112ms }
+.stagger > *:nth-child(6) { animation-delay: 140ms }
+.stagger > *:nth-child(7) { animation-delay: 168ms }
+.stagger > *:nth-child(8) { animation-delay: 196ms }
+.stagger > *:nth-child(9) { animation-delay: 224ms }
+.stagger > *:nth-child(n+10) { animation-delay: 250ms }
+
+/* Pressing something should answer under the finger, before anything else. */
+.tap { transition: transform .12s cubic-bezier(.22,.61,.36,1), background-color .15s, border-color .15s, color .15s; }
+.tap:active { transform: scale(.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-reveal, .anim-rise, .anim-fade, .anim-pulse,
+  .stagger > * { animation: none !important; }
+  .tap:active { transform: none; }
+  * { scroll-behavior: auto !important; }
+}

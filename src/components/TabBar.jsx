@@ -29,8 +29,16 @@ export default function TabBar() {
               <>
                 {/* The pill behind the active icon is what makes the current
                     tab readable at a glance on a small screen. */}
-                <span className={`px-4 py-1 rounded-full transition-colors ${isActive ? 'bg-brand/15 text-brand' : 'text-muted'}`}>
-                  <Icon name={t.icon} size={21} strokeWidth={isActive ? 2 : 1.5} />
+                {/* The pill grows into place and the icon lifts a little, so the
+                    tab you just pressed is the one that moved. */}
+                <span
+                  className={`px-4 py-1 rounded-full transition-all duration-200 ease-out ${
+                    isActive ? 'bg-brand/15 text-brand scale-105' : 'text-muted scale-100'
+                  }`}
+                >
+                  <span className={`block transition-transform duration-200 ease-out ${isActive ? '-translate-y-px' : ''}`}>
+                    <Icon name={t.icon} size={21} style={isActive ? undefined : 'line'} />
+                  </span>
                 </span>
                 <span className={`text-[10px] font-medium ${isActive ? 'text-brand' : 'text-muted'}`}>{t.label}</span>
               </>

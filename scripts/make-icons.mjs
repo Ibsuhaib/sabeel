@@ -1,17 +1,21 @@
 // Build-time: the app mark, at every size the web and Android ask for.
 //
-// The mark is the brand artwork in assets/brand/logo.png — a gold medallion
-// holding a mosque, crescent and leaves. It arrives as a 1254px square on a
-// cream ground, so this script finds the medallion, cuts it out as a circle,
-// and composites it onto the app's deep green at each size the platforms want.
+// The mark is the brand artwork in assets/brand/logo.png — a gold mihrab arch
+// with a crescent and a path running out through the doorway, which is what the
+// name means. It arrives already shaped as an app tile: a rounded square on the
+// app's own dark green, centred in a larger canvas with a drop shadow.
+//
+// That is a different shape of problem from the medallion it replaced. There is
+// nothing to cut out — the tile *is* the icon — so the work is finding its edges
+// and cropping to them, then letting each platform round the corners its own way.
 //
 // There is still no image dependency: png.mjs reads and writes the files and
-// box-filters the resize, which is what keeps the thin gold rim and the minaret
-// from breaking up on the way down to a 48px launcher icon.
+// box-filters the resize, which is what keeps the thin gold arch from breaking
+// up on the way down to a 48px launcher icon.
 //
-// scripts/calligraphy.mjs and logo-forms.mjs remain — they draw the lafẓ
-// al-jalālah with a modelled qalam, and `node scripts/preview-logo.mjs` renders
-// those candidates — but the brand artwork is what ships.
+// The previous artwork is kept at assets/brand/logo-medallion.png, and
+// calligraphy.mjs / logo-forms.mjs still draw the lafẓ al-jalālah candidates —
+// `node scripts/preview-logo.mjs` renders those — but this is what ships.
 import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT, ensure, log, kb } from './_util.mjs'
@@ -20,68 +24,84 @@ import { decodePNG, encodePNG, resize } from './png.mjs'
 const OUT = ensure(path.join(ROOT, 'public'))
 const SOURCE = path.join(ROOT, 'assets', 'brand', 'logo.png')
 
-const DEEP = [19, 46, 33]       // the ground the medallion sits on
-
 /* ----------------------------- the artwork ------------------------------ */
 
-// Locate the medallion inside the source square. Measured across the middle
-// rather than over the whole image, because the artwork carries a drop shadow
-// below it that would otherwise pull the centre down and inflate the radius.
-function findMedallion(img) {
+// Find the tile inside the source canvas.
+//
+// Absolute colour is no use here: the tile and the canvas behind it are both
+// near-black green, a few levels apart, and the canvas carries noise and a
+// gradient. What does separate them is the step at the edge, so each column and
+// row is averaged down its length and the largest change is taken as the border.
+// Averaging over a band rather than a single line keeps the arch in the middle
+// from being mistaken for an edge.
+function findTile(img) {
   const { width: W, height: H, data } = img
-  const at = (x, y) => (y * W + x) * 4
-  const g = [data[at(2, 2)], data[at(2, 2) + 1], data[at(2, 2) + 2]]
-  const far = (x, y) => {
-    const i = at(x, y)
-    return Math.abs(data[i] - g[0]) + Math.abs(data[i + 1] - g[1]) + Math.abs(data[i + 2] - g[2]) > 24
+  const lum = (x, y) => { const i = (y * W + x) * 4; return 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2] }
+
+  const colAvg = x => { let s = 0, n = 0; for (let y = Math.round(H * 0.2); y < H * 0.8; y += 3) { s += lum(x, y); n++ } return s / n }
+  const rowAvg = y => { let s = 0, n = 0; for (let x = Math.round(W * 0.2); x < W * 0.8; x += 3) { s += lum(x, y); n++ } return s / n }
+
+  const edge = (avg, from, to, step) => {
+    let best = { at: from, d: -1 }
+    for (let i = from; step > 0 ? i < to : i > to; i += step) {
+      const d = Math.abs(avg(i) - avg(i - step * 6))
+      if (d > best.d) best = { at: i, d }
+    }
+    return best.at
   }
 
-  let left = W, right = 0, top = H
-  for (const y of [Math.round(H * 0.47), Math.round(H * 0.5), Math.round(H * 0.53)]) {
-    for (let x = 0; x < W; x++) if (far(x, y)) { if (x < left) left = x; break }
-    for (let x = W - 1; x >= 0; x--) if (far(x, y)) { if (x > right) right = x; break }
-  }
-  for (const x of [Math.round(W * 0.47), Math.round(W * 0.5), Math.round(W * 0.53)]) {
-    for (let y = 0; y < H; y++) if (far(x, y)) { if (y < top) top = y; break }
-  }
+  const l = edge(colAvg, Math.round(W * 0.06), Math.round(W * 0.30), 1)
+  const r = edge(colAvg, Math.round(W * 0.94), Math.round(W * 0.70), -1)
+  const t = edge(rowAvg, Math.round(H * 0.06), Math.round(H * 0.30), 1)
+  const b = edge(rowAvg, Math.round(H * 0.94), Math.round(H * 0.70), -1)
 
-  const d = right - left + 1
-  return { cx: (left + right) / 2, cy: top + d / 2, r: d / 2 }
+  // Square it off around the centre: the drop shadow below the tile biases the
+  // bottom edge outwards, so the two axes disagree by a few pixels.
+  const cx = (l + r) / 2
+  const cy = (t + b) / 2
+  const side = Math.min(r - l, b - t)
+  return { x: Math.round(cx - side / 2), y: Math.round(cy - side / 2), side: Math.round(side) }
 }
 
-// Cut the medallion out as a square tile with a circular alpha, so whatever is
-// behind it — green, or nothing at all for an adaptive foreground — shows through.
-function cutTile(img, m) {
-  const size = Math.round(m.r * 2)
-  const tile = Buffer.alloc(size * size * 4)
-  const x0 = Math.round(m.cx - m.r)
-  const y0 = Math.round(m.cy - m.r)
-  const rr = m.r - 1.5          // pull in a touch so the cut lands inside the rim
+// Crop the tile, overscanning a little so its own rounded corners fall outside
+// the crop — otherwise rounding it again leaves a pale notch at each corner
+// where the artwork's curve and ours disagree.
+function cropTile(img, t, overscan = 0.055) {
+  const inset = Math.round(t.side * overscan)
+  const x0 = t.x + inset
+  const y0 = t.y + inset
+  const side = t.side - inset * 2
 
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = (y * size + x) * 4
-      const sx = x0 + x, sy = y0 + y
-      if (sx < 0 || sy < 0 || sx >= img.width || sy >= img.height) continue
+  const out = Buffer.alloc(side * side * 4)
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const d = (y * side + x) * 4
+      const sx = Math.min(img.width - 1, Math.max(0, x0 + x))
+      const sy = Math.min(img.height - 1, Math.max(0, y0 + y))
       const s = (sy * img.width + sx) * 4
-
-      // Antialias the circular edge over one pixel.
-      const dist = Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2)
-      const a = dist <= rr - 0.5 ? 1 : dist >= rr + 0.5 ? 0 : rr + 0.5 - dist
-      if (a <= 0) continue
-
-      tile[d] = img.data[s]
-      tile[d + 1] = img.data[s + 1]
-      tile[d + 2] = img.data[s + 2]
-      tile[d + 3] = Math.round(255 * a)
+      out[d] = img.data[s]; out[d + 1] = img.data[s + 1]
+      out[d + 2] = img.data[s + 2]; out[d + 3] = 255
     }
   }
-  return { width: size, height: size, data: tile }
+  return { width: side, height: side, data: out }
 }
 
 const source = decodePNG(fs.readFileSync(SOURCE))
-const medallion = findMedallion(source)
-const TILE = cutTile(source, medallion)
+const tileBox = findTile(source)
+const TILE = cropTile(source, tileBox)
+
+// The ground colour is taken from the artwork rather than declared, so the
+// Android adaptive background matches the tile exactly and no seam shows where
+// the launcher's mask cuts across it.
+const DEEP = (() => {
+  const spots = [[0.06, 0.06], [0.94, 0.06], [0.06, 0.94], [0.94, 0.94], [0.04, 0.5], [0.96, 0.5]]
+  const acc = [0, 0, 0]
+  for (const [fx, fy] of spots) {
+    const i = (Math.round(fy * (TILE.height - 1)) * TILE.width + Math.round(fx * (TILE.width - 1))) * 4
+    acc[0] += TILE.data[i]; acc[1] += TILE.data[i + 1]; acc[2] += TILE.data[i + 2]
+  }
+  return acc.map(v => Math.round(v / spots.length))
+})()
 
 /* ------------------------------ compositing ------------------------------ */
 
@@ -95,12 +115,17 @@ const roundedAlpha = (x, y, size, radius) => {
 /**
  * @param mode 'legacy'     rounded square on the deep ground (web + launcher)
  *             'full'       full square on the deep ground (Apple never masks)
- *             'foreground' the medallion alone, transparent (Android adaptive)
+ *             'foreground' the tile filling the canvas (Android adaptive)
  */
 function draw(size, mode) {
-  // Adaptive foregrounds are masked to the middle ~66% of the canvas, so the art
-  // is drawn smaller there to survive whatever shape a launcher applies.
-  const inset = mode === 'foreground' ? 0.64 : 0.86
+  // The mark is a tile, so it fills its canvas rather than sitting inside it.
+  //
+  // The adaptive foreground fills it completely and is *not* shrunk into the
+  // safe zone, which is what you would do for a free-standing emblem. The arch
+  // only occupies the middle half of the tile, so it is already well inside the
+  // safe area, and everything the launcher's mask crops away is plain ground —
+  // the same colour as the background layer, so the join is invisible.
+  const inset = mode === 'foreground' ? 1 : 0.995
   const art = Math.round(size * inset)
   const scaled = resize(TILE, art, art)
   const off = Math.round((size - art) / 2)
@@ -119,7 +144,7 @@ function draw(size, mode) {
 
       let r = DEEP[0] * groundA, g = DEEP[1] * groundA, b = DEEP[2] * groundA, a = groundA
 
-      // Medallion over it.
+      // The tile over it.
       const ax = x - off, ay = y - off
       if (ax >= 0 && ay >= 0 && ax < art && ay < art) {
         const s = (ay * art + ax) * 4
@@ -160,8 +185,8 @@ const write = (file, size, mode) => {
 // Capacitor scaffolded — which is how the old mark went on appearing at launch
 // long after the icon had changed.
 //
-// It is the medallion centred on the app's green, sized as a fraction of the
-// shorter edge so it looks the same on a tall phone and a wide tablet.
+// It is the tile centred on the app's green, sized as a fraction of the shorter
+// edge so it looks the same on a tall phone and a wide tablet.
 function drawSplash(w, h) {
   const art = Math.round(Math.min(w, h) * 0.42)
   const scaled = resize(TILE, art, art)
@@ -208,7 +233,7 @@ const SPLASH = {
 /* --------------------------------- build --------------------------------- */
 
 log('Sabeel · Icons')
-log(`  source assets/brand/logo.png · medallion r=${medallion.r.toFixed(0)}px at ${medallion.cx.toFixed(0)},${medallion.cy.toFixed(0)}`)
+log(`  source assets/brand/logo.png · tile ${TILE.width}px from (${tileBox.x},${tileBox.y}) · ground rgb(${DEEP.join(',')})`)
 
 for (const size of [192, 512]) {
   const bytes = write(path.join(OUT, `icon-${size}.png`), size, 'legacy')
@@ -237,7 +262,7 @@ if (fs.existsSync(ANDROID_RES)) {
 
   const anydpi = ensure(path.join(ANDROID_RES, 'mipmap-anydpi-v26'))
   // No <monochrome> entry: a themed icon is drawn as a flat silhouette, and a
-  // medallion reduced to one colour is an illegible blob.
+  // tile reduced to one colour is an illegible blob.
   const adaptive = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>

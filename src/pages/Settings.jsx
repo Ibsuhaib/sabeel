@@ -8,6 +8,7 @@ import { store } from '../lib/store.js'
 import { hijri } from '../lib/hijri.js'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Sheet, Stepper } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import { ICON_STYLES } from '../lib/iconStyles.js'
 import { locate as getFix, describeAccuracy } from '../lib/locate.js'
 
 export default function Settings() {
@@ -170,6 +171,34 @@ export default function Settings() {
             ]}
           />
         </div>
+        {/* Shown rather than described: four words naming four weights tell you
+            nothing, whereas the same five icons drawn four ways tell you at once. */}
+        <div className="px-4 pb-3">
+          <p className="text-[11px] text-muted mb-2">Icons</p>
+          <div className="grid grid-cols-4 gap-2">
+            {ICON_STYLES.map(o => {
+              const active = (settings.iconStyle || 'duotone') === o.id
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => set({ iconStyle: o.id })}
+                  aria-pressed={active}
+                  className={`tap rounded-2xl border px-2 py-2.5 transition-colors ${
+                    active ? 'border-brand bg-brand/10 text-brand' : 'border-line bg-surf text-muted'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    {['quran', 'prayer', 'dua'].map(n => (
+                      <Icon key={n} name={n} size={17} style={o.id} />
+                    ))}
+                  </span>
+                  <span className="block text-[10px] mt-1.5">{o.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <Card className="mx-4 divide-y divide-line">
           <Toggle checked={settings.showTranslation} onChange={v => set({ showTranslation: v })} label="Show translation" />
           <Toggle checked={settings.showTransliteration} onChange={v => set({ showTransliteration: v })} label="Show transliteration" />
