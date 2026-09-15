@@ -7,13 +7,38 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // Release past a quarter of the screen (or with enough speed) and it completes;
 // otherwise it springs back.
 //
-// Direction is right-to-left, as the book is: dragging left brings the next
-// page. Vertical scrolling is untouched — a drag only takes over once it is
-// clearly horizontal.
+// Direction follows the book, not the browser. A muṣḥaf is bound on the right,
+// so the free edge of the page you are reading is on its left: you lift that
+// edge and carry it rightwards to move on. Dragging RIGHT therefore turns to the
+// next page, and dragging LEFT goes back — the opposite of an English book, and
+// the opposite of what this did until someone who reads Arabic tried it.
+//
+// Vertical scrolling is untouched — a drag only takes over once it is clearly
+// horizontal.
 
 const START_THRESHOLD = 12     // px of horizontal movement before we take over
 const COMPLETE_FRACTION = 0.25 // of the screen width
 const FLICK_VELOCITY = 0.45    // px per ms
+
+/**
+ * What a finished drag means. Pure, so the direction can be tested directly
+ * rather than by trying to drive a real gesture and hoping the events arrive.
+ *
+ * Right is forward: a muṣḥaf is bound on the right, so the free edge of the page
+ * is on its left and you carry that edge rightwards to move on.
+ *
+ * @returns 'next' | 'prev' | null  (null = spring back)
+ */
+export function decideSwipe({ deltaX, width, elapsed, canNext, canPrev }) {
+  const distance = Math.abs(deltaX)
+  const velocity = distance / Math.max(1, elapsed)
+  const far = distance > width * COMPLETE_FRACTION
+  const quick = velocity > FLICK_VELOCITY && distance > 40
+  if (!far && !quick) return null
+  if (deltaX > 0) return canNext ? 'next' : null
+  if (deltaX < 0) return canPrev ? 'prev' : null
+  return null
+}
 
 export default function SwipePager({
   pageKey, onNext, onPrev, canNext = true, canPrev = true, className = '', children, fill}) {
@@ -31,7 +56,7 @@ export default function SwipePager({
     setDx(0)
     setAnimating(false)
     if (!enter) return
-    const from = enter === 'next' ? width.current : -width.current
+    const from = enter === 'next' ? -width.current : width.current
     setDx(from)
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => { setAnimating(true); setDx(0) })
@@ -42,7 +67,8 @@ export default function SwipePager({
   }, [pageKey])
 
   const finish = useCallback((dir) => {
-    const target = dir === 'next' ? -width.current : width.current
+    // Advancing sends the page off to the right, the way the paper goes.
+    const target = dir === 'next' ? width.current : -width.current
     setAnimating(true)
     setDx(target)
     setTimeout(() => {
@@ -72,9 +98,17 @@ export default function SwipePager({
       node.current?.setPointerCapture?.(d.id)
     }
 
-    // Resist at the ends so the muṣḥaf feels bounded rather than broken.
-    const blocked = (deltaX < 0 && !canNext) || (deltaX > 0 && !canPrev)
+    // Resist at the ends so the muṣḥaf feels bounded rather than broken. Right
+    // is forward here, so it is a rightward drag that is blocked on the last
+    // page — getting this the wrong way round rubber-bands the wrong edge.
+    const blocked = (deltaX > 0 && !canNext) || (deltaX < 0 && !canPrev)
     setDx(blocked ? deltaX * 0.18 : deltaX)
+  }
+
+  function springBack() {
+    setAnimating(true)
+    setDx(0)
+    setTimeout(() => setAnimating(false), 200)
   }
 
   function onPointerUp(e) {
@@ -83,18 +117,28 @@ export default function SwipePager({
     if (!d?.active) return
     node.current?.releasePointerCapture?.(d.id)
 
-    const deltaX = e.clientX - d.x
-    const elapsed = Math.max(1, Date.now() - d.t)
-    const velocity = Math.abs(deltaX) / elapsed
-    const far = Math.abs(deltaX) > width.current * COMPLETE_FRACTION
-    const quick = velocity > FLICK_VELOCITY && Math.abs(deltaX) > 40
+    const decision = decideSwipe({
+      deltaX: e.clientX - d.x,
+      width: width.current,
+      elapsed: Date.now() - d.t,
+      canNext,
+      canPrev
+    })
+    if (decision) return finish(decision)
+    springBack()
+  }
 
-    if ((far || quick) && deltaX < 0 && canNext) return finish('next')
-    if ((far || quick) && deltaX > 0 && canPrev) return finish('prev')
-
-    setAnimating(true)
-    setDx(0)
-    setTimeout(() => setAnimating(false), 200)
+  // A cancel is the gesture being taken away — the system claiming it, a call
+  // arriving, the browser deciding it owns the scroll. It is not a finished
+  // swipe, and treating it as one is worse than ignoring it: the cancel event
+  // carries its own coordinates, often 0, so a drag that was going one way
+  // completes as a page turn the other way. It springs back instead.
+  function onPointerCancel() {
+    const d = drag.current
+    drag.current = null
+    if (!d?.active) return
+    node.current?.releasePointerCapture?.(d.id)
+    springBack()
   }
 
   const progress = Math.min(1, Math.abs(dx) / (width.current || 1))
@@ -105,7 +149,7 @@ export default function SwipePager({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
       className={`relative ${className}`}
       // Let the browser own vertical scrolling; we only ever take the X axis.
       style={{ touchAction: 'pan-y' }}

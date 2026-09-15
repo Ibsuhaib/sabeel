@@ -27,7 +27,18 @@ const HORIZON_HOURS = 24
 let timers = []
 let installedFor = null
 
+// Whether the *web* Notification API is present. This is not the same question
+// as "can this app notify you": inside the Android WebView it is usually absent,
+// while notifications work perfectly well through Capacitor's plugin. Anything
+// user-facing must ask `available()` instead, or an installed app tells its user
+// their browser cannot do notifications while it is busy scheduling them.
 export const supported = () => typeof window !== 'undefined' && 'Notification' in window
+
+/** Can this build notify at all — natively or through the browser? */
+export async function available() {
+  return (await isNative()) || supported()
+}
+
 export const permission = () => (supported() ? Notification.permission : 'unsupported')
 
 // TimestampTrigger is the only way a closed PWA fires on time without a server.
@@ -304,6 +315,7 @@ export async function describeReliabilityAsync() {
 
 export function describeReliability() {
   if (!supported()) return { level: 'none', text: 'This browser cannot show notifications at all.' }
+  // describeReliabilityAsync answers for the native case before reaching here.
   if (hasTriggers()) {
     return {
       level: 'good',

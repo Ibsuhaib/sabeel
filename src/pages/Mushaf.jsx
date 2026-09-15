@@ -250,7 +250,7 @@ export default function Mushaf() {
 
       {!exact && (
         <p className="text-[11px] text-muted/60 text-center px-10 pb-4">
-          Swipe the page to turn it — left for the next, right to go back.
+          Swipe the page to turn it — right for the next, left to go back, as the book does.
         </p>
       )}
 

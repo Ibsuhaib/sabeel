@@ -17,7 +17,7 @@
     "data:all": "npm run data:quran && npm run data:layout && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:geomag && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons && npm run data:verify",
     "data:fonts": "node scripts/fetch-fonts.mjs",
     "data:icons": "node scripts/make-icons.mjs",
-    "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs && node scripts/audit-sources.mjs",
+    "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs && node scripts/test-swipe.mjs && node scripts/audit-sources.mjs",
     "data:reciters": "node scripts/fetch-reciters.mjs",
     "data:adhan": "node scripts/fetch-adhan.mjs",
     "check:imports": "node scripts/check-imports.mjs",

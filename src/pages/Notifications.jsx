@@ -5,7 +5,7 @@ import { fmtTime } from '../lib/format.js'
 import { useData } from '../lib/useData.js'
 import { adhanCatalogue } from '../lib/data.js'
 import {
-  supported, permission, requestPermission, hasTriggers,
+  supported, available, permission, effectivePermission, requestPermission, hasTriggers,
   schedule, sendTest, upcoming, describeReliability, describeReliabilityAsync
 } from '../lib/notifications.js'
 import { prime, playBeep, playAdhan, stopSound, vibrate } from '../lib/sounds.js'
@@ -38,12 +38,28 @@ export default function Notifications() {
   const n = settings.notifications || {}
 
   const [perm, setPerm] = useState(permission())
+  // null while we are still asking; the screen renders normally in the meantime
+  // rather than flashing an error it may be about to retract.
+  const [canNotify, setCanNotify] = useState(null)
   const [status, setStatus] = useState(null)
   const [msg, setMsg] = useState(null)
 
   const { data: adhans } = useData(adhanCatalogue, [], { label: 'the adhan list' })
 
   useEffect(() => () => stopSound(), [])
+
+  useEffect(() => {
+    let alive = true
+    available().then(ok => { if (alive) setCanNotify(ok) }).catch(() => { if (alive) setCanNotify(supported()) })
+    return () => { alive = false }
+  }, [])
+
+  // On Android the permission is the plugin's, not the browser's.
+  useEffect(() => {
+    let alive = true
+    effectivePermission().then(p => { if (alive && p) setPerm(p) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
 
   // Keep what is armed in step with the settings on this screen.
   useEffect(() => {
@@ -91,11 +107,19 @@ export default function Notifications() {
   useEffect(() => { describeReliabilityAsync().then(setReliability) }, [])
   const next = settings.location ? upcoming(settings).slice(0, 4) : []
 
-  if (!supported()) {
+  // `supported()` asks only whether the web Notification API exists, which it
+  // does not inside the Android WebView — so gating on it told people running
+  // the installed app that their browser could not do notifications, while the
+  // app was perfectly able to schedule them natively.
+  if (canNotify === false) {
     return (
       <Screen>
         <Header title="Prayer notifications" back />
-        <Empty icon="warn" title="This browser cannot show notifications" body="Try installing Sabeel to your home screen, or use a different browser." />
+        <Empty
+          icon="warn"
+          title="Notifications are not available here"
+          body="This browser has no notification support. Installing Sabeel to your home screen, or using the Android app, will give it one."
+        />
       </Screen>
     )
   }
@@ -293,10 +317,17 @@ export default function Notifications() {
                 <Card className="mx-4 mt-3 p-4">
                   <p className="text-xs font-semibold mb-2">If notifications stop arriving</p>
                   <ul className="text-[11px] text-muted leading-relaxed space-y-1.5 list-disc pl-4">
-                    <li><strong className="text-ink">Install Sabeel to your home screen.</strong> An installed app is treated far more kindly than a browser tab.</li>
-                    <li><strong className="text-ink">Xiaomi, Oppo, Vivo, Realme:</strong> Settings → Apps → Sabeel (or your browser) → Battery saver → <em>No restrictions</em>, and turn on Autostart.</li>
+                    {/* Advice to install it is noise to someone reading this inside
+                        the installed app — which is where this screen is most
+                        likely to be read when something has gone wrong. */}
+                    {reliability.level !== 'best' && (
+                      <li><strong className="text-ink">Install Sabeel to your home screen.</strong> An installed app is treated far more kindly than a browser tab.</li>
+                    )}
+                    <li><strong className="text-ink">Xiaomi, Oppo, Vivo, Realme:</strong> Settings → Apps → Sabeel → Battery saver → <em>No restrictions</em>, and turn on Autostart.</li>
                     <li><strong className="text-ink">Samsung:</strong> Settings → Battery → Background usage limits → remove Sabeel from “Sleeping apps”.</li>
-                    <li><strong className="text-ink">iPhone:</strong> add Sabeel to the Home Screen from Safari's share menu, then allow notifications when asked.</li>
+                    {reliability.level !== 'best' && (
+                      <li><strong className="text-ink">iPhone:</strong> add Sabeel to the Home Screen from Safari's share menu, then allow notifications when asked.</li>
+                    )}
                     <li>Check the phone is not in Do Not Disturb or a Focus mode at prayer times.</li>
                   </ul>
                   <p className="text-[11px] text-muted/70 mt-3 leading-relaxed">

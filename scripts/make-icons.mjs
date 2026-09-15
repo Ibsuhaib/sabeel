@@ -152,6 +152,59 @@ const write = (file, size, mode) => {
   return png.length
 }
 
+
+/* --------------------------------- splash -------------------------------- */
+
+// The launch screen. Android shows this before the web view has painted
+// anything, so if it is not generated alongside the icons it keeps whatever
+// Capacitor scaffolded — which is how the old mark went on appearing at launch
+// long after the icon had changed.
+//
+// It is the medallion centred on the app's green, sized as a fraction of the
+// shorter edge so it looks the same on a tall phone and a wide tablet.
+function drawSplash(w, h) {
+  const art = Math.round(Math.min(w, h) * 0.42)
+  const scaled = resize(TILE, art, art)
+  const ox = Math.round((w - art) / 2)
+  const oy = Math.round((h - art) / 2)
+
+  const px = Buffer.alloc(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = (y * w + x) * 4
+      let r = DEEP[0], g = DEEP[1], b = DEEP[2]
+
+      const ax = x - ox, ay = y - oy
+      if (ax >= 0 && ay >= 0 && ax < art && ay < art) {
+        const sIdx = (ay * art + ax) * 4
+        const a = scaled.data[sIdx + 3] / 255
+        if (a > 0) {
+          r = scaled.data[sIdx] * a + r * (1 - a)
+          g = scaled.data[sIdx + 1] * a + g * (1 - a)
+          b = scaled.data[sIdx + 2] * a + b * (1 - a)
+        }
+      }
+      px[d] = Math.round(r); px[d + 1] = Math.round(g); px[d + 2] = Math.round(b); px[d + 3] = 255
+    }
+  }
+  return encodePNG(w, h, px)
+}
+
+// The densities Capacitor scaffolds, portrait and landscape.
+const SPLASH = {
+  'drawable': [480, 320],
+  'drawable-port-mdpi': [320, 480],
+  'drawable-port-hdpi': [480, 800],
+  'drawable-port-xhdpi': [720, 1280],
+  'drawable-port-xxhdpi': [960, 1600],
+  'drawable-port-xxxhdpi': [1280, 1920],
+  'drawable-land-mdpi': [480, 320],
+  'drawable-land-hdpi': [800, 480],
+  'drawable-land-xhdpi': [1280, 720],
+  'drawable-land-xxhdpi': [1600, 960],
+  'drawable-land-xxxhdpi': [1920, 1280]
+}
+
 /* --------------------------------- build --------------------------------- */
 
 log('Sabeel · Icons')
@@ -200,7 +253,15 @@ if (fs.existsSync(ANDROID_RES)) {
     <color name="ic_launcher_background">#${DEEP.map(c => c.toString(16).padStart(2, '0')).join('')}</color>
 </resources>
 `)
+  let splashBytes = 0
+  for (const [dir, [w, h]] of Object.entries(SPLASH)) {
+    const target = ensure(path.join(ANDROID_RES, dir))
+    const png = drawSplash(w, h)
+    fs.writeFileSync(path.join(target, 'splash.png'), png)
+    splashBytes += png.length
+  }
   log(`  android: ${Object.keys(DENSITIES).length} densities + adaptive icon`)
+  log(`  splash:  ${Object.keys(SPLASH).length} sizes, ${kb(splashBytes)}`)
 } else {
   log('  android/ not present — skipping launcher icons')
 }
