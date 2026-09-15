@@ -25,6 +25,9 @@ streams, and whatever you play is kept on the device.
 There is nothing to install for the web version — open it in a browser and use
 *Add to Home Screen*.
 
+Sabeel collects nothing: no account, no analytics, no tracking, no server.
+See [PRIVACY.md](PRIVACY.md).
+
 ---
 
 ## Founding principles

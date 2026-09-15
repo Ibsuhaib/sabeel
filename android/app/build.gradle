@@ -1,5 +1,47 @@
 apply plugin: 'com.android.application'
 
+// ---------------------------------------------------------------------------
+// Version numbers come from git rather than from a hand-edited constant.
+//
+// Play rejects an upload whose versionCode is not higher than the last one, and
+// the failure comes after the upload, so a forgotten bump is a wasted release.
+// The commit count can only ever go up, which is exactly the property the field
+// needs. The name people see is set deliberately, in VERSION at the repo root.
+//
+// Both fall back to something valid if git is unavailable, so a source download
+// with no .git still builds.
+// ---------------------------------------------------------------------------
+def gitCommitCount = { ->
+    try {
+        def out = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-list', '--count', 'HEAD'
+            standardOutput = out
+            errorOutput = new ByteArrayOutputStream()
+        }
+        return out.toString().trim().toInteger()
+    } catch (ignored) {
+        return 1
+    }
+}
+
+def readableVersion = { ->
+    def f = file("${rootDir}/../VERSION")
+    return f.exists() ? f.text.trim() : '0.1.0'
+}
+
+// Signing details are read from a file that is never committed, or from the
+// environment when CI is doing the signing. An unsigned release build still
+// succeeds — it just cannot go to Play — so a contributor without the key can
+// still check that the release variant compiles.
+def keystoreProps = new Properties()
+def keystoreFile = rootProject.file('keystore.properties')
+if (keystoreFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystoreFile))
+}
+def storeFilePath = keystoreProps['storeFile'] ?: System.getenv('SABEEL_KEYSTORE')
+def hasSigning = storeFilePath != null && file(storeFilePath).exists()
+
 android {
     namespace = "app.sabeel.quran"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +49,8 @@ android {
         applicationId "app.sabeel.quran"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode gitCommitCount()
+        versionName readableVersion()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +58,41 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasSigning) {
+                storeFile file(storeFilePath)
+                storePassword keystoreProps['storePassword'] ?: System.getenv('SABEEL_STORE_PASSWORD')
+                keyAlias keystoreProps['keyAlias'] ?: System.getenv('SABEEL_KEY_ALIAS')
+                keyPassword keystoreProps['keyPassword'] ?: System.getenv('SABEEL_KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Shrinking matters more here than in most apps: the bundle carries
+            // the whole Quran, 36,512 hadith and five adhan recordings, so every
+            // avoidable kilobyte of code is worth removing.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasSigning) signingConfig signingConfigs.release
         }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    // The data is already compressed; letting the packager try again costs build
+    // time and install size for nothing.
+    androidResources {
+        noCompress += ['mp3', 'ogg', 'woff2']
+    }
+
+    bundle {
+        language { enableSplit = false }   // the app ships its own translations
     }
 }
 

@@ -35,3 +35,9 @@ android/local.properties
 *.keystore
 !android/gradle/wrapper/gradle-wrapper.jar
 logo-preview.png
+
+# Signing material. Losing the upload key means losing the ability to update the
+# app on Play; committing it means anyone can publish as you.
+*.jks
+keystore.properties
+android/keystore.properties
