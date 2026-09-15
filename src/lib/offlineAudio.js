@@ -12,7 +12,7 @@
 // Writing through the Cache API rather than leaving it all to the service
 // worker is what makes the rest possible: knowing precisely what is on the
 // device, reporting real progress, and deleting exactly one surah again.
-import { ayahUrl, surahUrl } from './audio.js'
+import { ayahUrl, surahUrl, basmalaUrl, hasBasmala } from './audio.js'
 
 export const AUDIO_CACHE = 'sabeel-audio'
 
@@ -28,7 +28,12 @@ async function bucket() {
 export function urlsForSurah(reciter, surah, ayahCount) {
   if (!reciter) return []
   if (reciter.mode === 'surah') return [surahUrl(reciter, surah)]
-  return Array.from({ length: ayahCount }, (_, i) => ayahUrl(reciter, surah, i + 1))
+  const urls = Array.from({ length: ayahCount }, (_, i) => ayahUrl(reciter, surah, i + 1))
+  // Playback opens with the basmala, so an offline copy has to include it or the
+  // surah would start with a failed request every time the network is gone.
+  // It is 1:1 for this reciter, so downloading al-Fatihah already covers it.
+  if (hasBasmala(surah)) urls.unshift(basmalaUrl(reciter))
+  return urls
 }
 
 /* -------------------------------- status --------------------------------- */

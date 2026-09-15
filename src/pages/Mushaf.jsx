@@ -6,6 +6,7 @@ import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
 import { player } from '../lib/audio.js'
 import { usePlayer, loadReciters } from '../lib/reciters.js'
+import { BASMALA_AYAH } from '../lib/audio.js'
 import { toArabicNumber } from '../lib/format.js'
 import { Loading, LoadError, Sheet, IconButton, Button, Choice } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
@@ -140,7 +141,13 @@ export default function Mushaf() {
                     <span className="block my-5" style={{ textAlign: 'center' }}>
                       <SurahBanner surah={meta.surahs.find(s => s.n === a.surah)} />
                       {a.surah !== 1 && a.surah !== 9 && (
-                        <span className="block mt-4" style={{ fontSize: '0.86em' }}>{BISMILLAH}</span>
+                        <span
+                          className={`block mt-4 rounded transition-colors ${
+                            audio.playing && audio.surah === a.surah && audio.ayah === BASMALA_AYAH
+                              ? 'text-brand bg-brand/10' : ''
+                          }`}
+                          style={{ fontSize: '0.86em' }}
+                        >{BISMILLAH}</span>
                       )}
                     </span>
                   )}

@@ -9,7 +9,7 @@
 //     white blob if you do not supply one.
 import fs from 'node:fs'
 import path from 'node:path'
-import { ROOT, ensure, log } from './_util.mjs'
+import { ROOT, ensure, log, writeJSON } from './_util.mjs'
 
 const ANDROID = path.join(ROOT, 'android')
 if (!fs.existsSync(ANDROID)) {
@@ -63,25 +63,45 @@ log(`  manifest: ${added} permission(s) added`)
 /* -------------------------- adhan notification sound --------------------- */
 
 const raw = ensure(path.join(MAIN, 'res', 'raw'))
-// Android notification sounds are raw resources, chosen per channel. Fajr has
-// its own channel because its adhan is a different recording; until a
-// licence-clear Fajr recording is shipped, it falls back to the standard one so
-// the channel is never silent.
+// Android notification sounds are raw resources, and a channel's sound is fixed
+// the moment Android creates the channel — it cannot be changed afterwards. So
+// every adhan is installed as its own raw resource and the app creates one
+// channel per recording, switching channel when you pick a different adhan.
+// That is the only way a choice of adhan actually reaches the notification.
+//
+// Resource names may only contain lowercase letters, digits and underscores.
 const catalogue = path.join(ROOT, 'public', 'data', 'adhan.json')
 const adhanDir = path.join(ROOT, 'public', 'adhan')
 let list = []
 try { list = JSON.parse(fs.readFileSync(catalogue, 'utf8')).adhans || [] } catch { /* not built yet */ }
 
-const standard = list.find(a => a.type !== 'fajr') || list[0]
-const fajr = list.find(a => a.type === 'fajr') || standard
+export const resName = id => 'adhan_' + String(id).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 
-for (const [res, entry] of [['adhan.mp3', standard], ['adhan_fajr.mp3', fajr]]) {
-  if (!entry) { log(`  ! ${res} missing — run \`npm run data:adhan\` first`); continue }
+// Clear out sounds from a previous build so res/raw does not accumulate adhans
+// that are no longer in the catalogue — they would bloat the APK and linger in
+// the system's notification-sound list.
+for (const f of fs.readdirSync(raw)) {
+  if (/^adhan.*\.(mp3|ogg|oga|wav)$/i.test(f)) fs.rmSync(path.join(raw, f))
+}
+
+const installed = []
+for (const entry of list) {
   const src = path.join(adhanDir, entry.file)
   if (!fs.existsSync(src)) { log(`  ! ${entry.file} not found in public/adhan`); continue }
-  const dst = path.join(raw, res)
-  fs.copyFileSync(src, dst)
-  log(`  res/raw/${res} ← ${entry.muadhdhin} (${(fs.statSync(dst).size / 1024).toFixed(0)} KB)`)
+  const ext = path.extname(entry.file).replace('.oga', '.ogg')
+  const res = resName(entry.id) + ext
+  fs.copyFileSync(src, path.join(raw, res))
+  installed.push({ id: entry.id, res: resName(entry.id) })
+  log(`  res/raw/${res} ← ${entry.muadhdhin} (${(fs.statSync(src).size / 1024).toFixed(0)} KB)`)
+}
+
+// A manifest the app reads at runtime to know which raw resource backs which
+// adhan id, so the two never drift apart.
+if (installed.length) {
+  writeJSON(path.join(ROOT, 'public', 'data', 'android-sounds.json'), { sounds: installed })
+  log(`  data/android-sounds.json — ${installed.length} selectable notification sound(s)`)
+} else {
+  log('  ! no adhan installed — run `npm run data:adhan` first')
 }
 
 /* --------------------------- status bar icon ----------------------------- */

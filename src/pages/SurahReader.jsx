@@ -6,6 +6,7 @@ import { store } from '../lib/store.js'
 import { useSettings } from '../lib/settings.jsx'
 import { player } from '../lib/audio.js'
 import { usePlayer, loadReciters, findReciter } from '../lib/reciters.js'
+import { BASMALA_AYAH } from '../lib/audio.js'
 import { toArabicNumber } from '../lib/format.js'
 import { Loading, LoadError, Sheet, Toggle, Choice, IconButton, Button } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
@@ -67,8 +68,9 @@ export default function SurahReader() {
   }, [data, params])
 
   useEffect(() => {
-    if (!audio.playing || !audio.ayah || audio.surah !== num) return
-    document.getElementById(`ayah-${audio.ayah}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    if (!audio.playing || audio.ayah == null || audio.surah !== num) return
+    const id = audio.ayah === BASMALA_AYAH ? 'ayah-basmala' : `ayah-${audio.ayah}`
+    document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [audio.ayah, audio.playing, audio.surah, num])
 
   // One scroll handler feeds both the resume position and the play-from point.
@@ -102,6 +104,9 @@ export default function SurahReader() {
   const ayahs = data.s.ayahs
   const meta = data.meta
   const showBismillah = num !== 1 && num !== 9
+  // Ayah 0 is the basmala; the reader highlights it like any other ayah so you
+  // can see that what you are hearing is the opening, not the first ayah.
+  const basmalaPlaying = audio.playing && audio.surah === num && audio.ayah === BASMALA_AYAH
   const trKey = settings.translation === 'e2' ? 'e2' : 'en'
   const currentPage = ayahs.find(a => a.v === readingAt)?.p || info.page
 
@@ -137,7 +142,13 @@ export default function SurahReader() {
           {info.type} · Surah {info.n} · Juz {info.juz} · Page {info.page}
         </div>
         {showBismillah && (
-          <div className="ar mt-6 mb-2 text-ink/90" style={{ textAlign: 'center', fontSize: 'calc(var(--ar-size) * 0.9)' }}>
+          <div
+            id="ayah-basmala"
+            className={`ar mt-6 mb-2 rounded-xl transition-colors ${
+              basmalaPlaying ? 'text-brand bg-brand/10' : 'text-ink/90'
+            }`}
+            style={{ textAlign: 'center', fontSize: 'calc(var(--ar-size) * 0.9)' }}
+          >
             {BISMILLAH}
           </div>
         )}

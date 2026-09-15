@@ -65,16 +65,61 @@ export async function nativePermission() {
 // Fajr gets its own channel because its adhan is a different recording — the one
 // with the tathwīb — and a channel's sound is fixed once Android has created it.
 const CHANNELS = {
-  adhan: { id: 'sabeel-adhan', name: 'Prayer times (adhan)', sound: 'adhan', importance: 5 },
-  adhanFajr: { id: 'sabeel-adhan-fajr', name: 'Fajr (adhan)', sound: 'adhan_fajr', importance: 5 },
   beep: { id: 'sabeel-chime', name: 'Prayer times (chime)', sound: undefined, importance: 5 },
   silent: { id: 'sabeel-silent', name: 'Prayer times (silent)', sound: undefined, importance: 3 }
 }
 
-export async function ensureChannels() {
+// A channel's sound is fixed when Android creates it and can never be changed,
+// so "let the user pick an adhan" means a channel per recording, not one channel
+// whose sound is edited. The id encodes the recording, so picking a different
+// adhan simply routes to a different channel — and the old one is deleted so the
+// system settings list does not fill up with every adhan ever tried.
+const adhanChannel = (res, slot) => ({
+  id: `sabeel-adhan-${slot}-${res}`,
+  name: slot === 'fajr' ? 'Fajr (adhan)' : 'Prayer times (adhan)',
+  sound: res,
+  importance: 5
+})
+
+let soundMap = null
+async function androidSounds() {
+  if (soundMap) return soundMap
+  try {
+    const res = await fetch('data/android-sounds.json')
+    const j = await res.json()
+    soundMap = Object.fromEntries((j.sounds || []).map(s => [s.id, s.res]))
+  } catch {
+    soundMap = {}
+  }
+  return soundMap
+}
+
+// The raw resource for an adhan id, or null when that recording was not
+// installed — in which case the notification falls back to the chime rather
+// than to silence, so a prayer is never announced by nothing at all.
+async function resourceFor(adhanId) {
+  const map = await androidSounds()
+  return map[adhanId] || map[Object.keys(map)[0]] || null
+}
+
+async function wantedChannels(settings) {
+  const n = settings.notifications || {}
+  const out = [CHANNELS.beep, CHANNELS.silent]
+  const std = await resourceFor(n.adhanId)
+  const fajr = await resourceFor(n.fajrAdhanId || n.adhanId)
+  if (std) out.push(adhanChannel(std, 'std'))
+  if (fajr) out.push(adhanChannel(fajr, 'fajr'))
+  return out
+}
+
+export async function ensureChannels(settings = {}) {
   const LN = await notifications()
   if (!LN?.createChannel) return false
-  for (const c of Object.values(CHANNELS)) {
+
+  const wanted = await wantedChannels(settings)
+  const keep = new Set(wanted.map(c => c.id))
+
+  for (const c of wanted) {
     try {
       await LN.createChannel({
         id: c.id,
@@ -89,6 +134,15 @@ export async function ensureChannels() {
       })
     } catch { /* channel already exists, or this platform has none */ }
   }
+
+  // Drop channels for adhans no longer selected.
+  try {
+    const { channels } = await LN.listChannels()
+    for (const c of channels || []) {
+      if (c.id.startsWith('sabeel-adhan-') && !keep.has(c.id)) await LN.deleteChannel({ id: c.id })
+    }
+  } catch { /* listChannels is not available on every platform */ }
+
   return true
 }
 
@@ -106,17 +160,23 @@ export async function scheduleNative(items, settings) {
   const LN = await notifications()
   if (!LN) return { scheduled: 0, native: false }
 
-  await ensureChannels()
+  await ensureChannels(settings)
   try { await LN.cancel({ notifications: (await LN.getPending()).notifications || [] }) } catch { /* nothing pending */ }
 
+  const n = settings.notifications || {}
   const place = settings.location?.label
+  const stdRes = await resourceFor(n.adhanId)
+  const fajrRes = await resourceFor(n.fajrAdhanId || n.adhanId)
+
   // The mode travels on the item, so each prayer lands on the channel matching
   // its own setting. Fajr routes to its own channel only when the adhan is what
   // it is set to; a chime or silence is the same whatever the prayer.
   const channelFor = item => {
     const mode = item.sound || 'adhan'
-    if (mode === 'adhan' && item.prayer === 'fajr') return CHANNELS.adhanFajr
-    return CHANNELS[mode] || CHANNELS.adhan
+    if (mode !== 'adhan') return CHANNELS[mode] || CHANNELS.beep
+    const isFajr = item.prayer === 'fajr'
+    const res = isFajr ? fajrRes : stdRes
+    return res ? adhanChannel(res, isFajr ? 'fajr' : 'std') : CHANNELS.beep
   }
 
   const payload = items.slice(0, 60).map(item => ({

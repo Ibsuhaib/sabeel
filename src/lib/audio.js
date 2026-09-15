@@ -16,6 +16,18 @@ export const REPEATS = [1, 2, 3, 5, 7, 10, Infinity]
 // A pause between ayahs, for repeating after the reciter while memorising.
 export const DELAYS = [0, 1, 2, 3, 5, 8]
 
+// The basmala is recited before every surah except al-Fatihah, where it is the
+// first ayah and so already has its own file, and at-Tawbah, which has none.
+// Per-ayah recitations do not ship a basmala track per surah — the one recorded
+// for 1:1 is the basmala, and that is the file every reciter has — so ayah 0 is
+// used to mean "the basmala", and it loads 001001 from whichever reciter is playing.
+export const BASMALA_AYAH = 0
+export const hasBasmala = surah => surah !== 1 && surah !== 9
+
+export function basmalaUrl(reciter) {
+  return `${EVERY_AYAH}/${reciter.id}/001001.mp3`
+}
+
 export const ayahFileId = (surah, ayah) =>
   `${String(surah).padStart(3, '0')}${String(ayah).padStart(3, '0')}`
 
@@ -100,6 +112,14 @@ function onEnded() {
     return
   }
 
+  // The basmala is an opening, not part of the count: it is never repeated and
+  // always hands over to the first ayah.
+  if (state.ayah === BASMALA_AYAH) {
+    state.played = 0
+    load(state.surah, 1)
+    return
+  }
+
   // Per-ayah: repeat this ayah first.
   if (state.played + 1 < state.repeat) {
     state.played++
@@ -149,7 +169,9 @@ function load(surah, ayah, { autoplay = true } = {}) {
 
   a.src = state.reciter.mode === 'surah'
     ? surahUrl(state.reciter, surah)
-    : ayahUrl(state.reciter, surah, ayah)
+    : ayah === BASMALA_AYAH
+      ? basmalaUrl(state.reciter)
+      : ayahUrl(state.reciter, surah, ayah)
   a.playbackRate = state.speed
 
   if (autoplay) a.play().catch(() => { state.playing = false; state.loading = false; emit() })
@@ -184,12 +206,20 @@ export const player = {
     if (!state.reciter) return
     if (lastAyah) state.lastAyah = lastAyah
     state.played = 0
-    load(surah, ayah)
+    // Beginning a surah at its first ayah means beginning with the basmala.
+    // Starting part-way through does not — you are resuming mid-surah, and an
+    // opening formula there would be wrong.
+    const start = (ayah === 1 && state.reciter.mode !== 'surah' && hasBasmala(surah))
+      ? BASMALA_AYAH
+      : ayah
+    load(surah, start)
   },
 
   toggle(surah, ayah, lastAyah) {
     if (!state.reciter) return
-    const same = state.surah === surah && (state.reciter.mode === 'surah' || state.ayah === ayah)
+    const atBasmalaFor = state.ayah === BASMALA_AYAH && ayah === 1
+    const same = state.surah === surah &&
+      (state.reciter.mode === 'surah' || state.ayah === ayah || atBasmalaFor)
     if (same && state.playing) { audio().pause(); return }
     if (same && el?.src) { audio().play().catch(() => {}); return }
     this.play(surah, ayah, lastAyah)

@@ -90,6 +90,46 @@ function fromQuran([s, from, to = from], clip) {
   }
 }
 
+// The five categories that come from the upstream dataset carry their own
+// attributions, but many name only a collection — "HR. al-Bukhari" — with no
+// number, which is not something a reader can go and check. Where the same words
+// can be found in the corpus this app already ships, the citation is upgraded to
+// the exact reference. Where they cannot, the upstream attribution is kept as it
+// is; it is still honest, just less precise.
+function sharpenUpstream() {
+  const indexFile = path.join(DATA, 'dua', 'index.json')
+  if (!fs.existsSync(indexFile)) return
+  const cats = JSON.parse(fs.readFileSync(indexFile, 'utf8')).categories
+
+  let upgraded = 0, kept = 0
+  for (const c of cats) {
+    const file = path.join(DATA, 'dua', `${c.slug}.json`)
+    if (!fs.existsSync(file)) continue
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'))
+    let dirty = false
+
+    for (const it of data.items) {
+      // Anything the adhkar seed built already has an exact reference.
+      if (it.hadith || it.quran || !it.ar) continue
+      // A citation that already names a number is precise enough.
+      if (it.source && /\d/.test(it.source)) continue
+
+      const hit = locate(it.ar)
+      if (hit.exact) {
+        if (it.source) it.citedAs = it.source      // keep what upstream said
+        it.source = hit.source
+        it.hadith = { col: hit.col, n: hit.n }
+        upgraded++
+        dirty = true
+      } else if (it.source) {
+        kept++
+      }
+    }
+    if (dirty) writeJSON(file, data)
+  }
+  log(`  upstream citations: ${upgraded} given an exact reference, ${kept} left as the dataset stated them`)
+}
+
 function main() {
   log('Sabeel · Adhkar builder')
   log(`  searching ${corpusSize().toLocaleString()} hadith`)
@@ -156,6 +196,8 @@ function main() {
 
     log(`  ${resolved} entries sourced from data we ship, ${unsourced} without a source`)
     log(`  wrote ${CATEGORIES.length + 1} files, ${kb(total)}`)
+
+    sharpenUpstream()
   })
 }
 

@@ -78,7 +78,28 @@ Sunan an-Nasa'i, Sunan Ibn Majah, Muwatta Malik, 40 Hadith Nawawi, 40 Hadith Qud
 
 | Item | Source | Status | Notes |
 |---|---|---|---|
-| Adhan by Aaqib Azeez | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3) | ✅ | **CC BY-SA 4.0**, uploaded as own work. Downloaded at build time and self-hosted so the adhan still sounds with no signal. Attribution is shown in the app on the notification settings screen, as the licence requires. |
+| Adhan by Aaqib Azeez | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3) | ✅ | **CC BY-SA 4.0**, uploaded as own work. |
+| Azan (Andrewler), 3:03 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Azan.ogg) | ✅ | **CC BY-SA 4.0**. Vorbis comments carry nothing but an encoder string. |
+| Beautiful adhan (Adam-synagda), 2:34 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg) | ✅ | **CC0**. |
+| Adhan (Aishatu98), 0:42 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Adhan.ogg) | ✅ | **CC0**. |
+| Adhan wiki (Jarih), 0:27 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Adhan_wiki.oga) | ✅ | **CC BY-SA 3.0**. Described by its uploader as a plain reading of the adhan, Sunni wording. |
+
+All five are downloaded at build time and self-hosted, so the adhan still sounds
+with no signal, and every one is installed as its own Android raw resource —
+a notification channel's sound is fixed when Android creates it, so a choice of
+adhan only reaches the notification if each recording has a channel of its own.
+Attribution is shown in the app on the notification settings screen, as the
+licences require.
+
+### Rejected, and why
+
+| Candidate | Reason |
+| --- | --- |
+| `cdn.aladhan.com/audio/adhans/a3.mp3` | ID3 title identifies Karl Jenkins, *The Armed Man* (2001) — copyrighted. |
+| islamcan.com adhan set | No muadhdhin named and no licence stated anywhere. |
+| [Call to prayer by Sabah Fakhry](https://commons.wikimedia.org/wiki/File:Call_to_prayer_by_Sabah_Fakhry.mp3) | The public-domain claim is sourced to a YouTube upload, which cannot grant it. |
+| [Islamic call to worship](https://commons.wikimedia.org/wiki/File:Islamic_call_to_worship.oga) | CC BY-SA 4.0 and looks ideal — but its own description says it is a talk *about* the adhan and its rulings, not a call to prayer. |
+| [Llamada a oración, Mezquita Hassan II](https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav) | Licence is fine, but it is a 30 MB ambient street recording from outside the mosque — not a usable notification sound. |
 
 **A warning for anyone adding another adhan.** Adhan audio is the easiest place in this project
 to ship something you have no right to. While looking for a recording, `cdn.aladhan.com/audio/adhans/a3.mp3`
