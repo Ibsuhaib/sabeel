@@ -81,34 +81,26 @@ const adhanChannel = (res, slot) => ({
   importance: 5
 })
 
-let soundMap = null
-async function androidSounds() {
-  if (soundMap) return soundMap
-  try {
-    const res = await fetch('data/android-sounds.json')
-    const j = await res.json()
-    soundMap = Object.fromEntries((j.sounds || []).map(s => [s.id, s.res]))
-  } catch {
-    soundMap = {}
-  }
-  return soundMap
-}
+// The raw resource an adhan is installed as. Derived from the id by the same
+// rule scripts/android-setup.mjs uses when it copies the file in, rather than
+// read from a manifest: android-setup runs after `cap sync` has already copied
+// the web assets, so any file it wrote would never reach the APK — and reading
+// it would be a fetch at the moment a prayer is being scheduled, which is
+// exactly when the phone is least likely to want one. The smoke test checks the
+// two spellings agree.
+const resName = id =>
+  'adhan_' + String(id).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 
-// The raw resource for an adhan id, or null when that recording was not
-// installed — in which case the notification falls back to the chime rather
-// than to silence, so a prayer is never announced by nothing at all.
-async function resourceFor(adhanId) {
-  const map = await androidSounds()
-  return map[adhanId] || map[Object.keys(map)[0]] || null
-}
+const resourceFor = adhanId => (adhanId ? resName(adhanId) : null)
 
-async function wantedChannels(settings) {
+function wantedChannels(settings) {
   const n = settings.notifications || {}
   const out = [CHANNELS.beep, CHANNELS.silent]
-  const std = await resourceFor(n.adhanId)
-  const fajr = await resourceFor(n.fajrAdhanId || n.adhanId)
+  const std = resourceFor(n.adhanId)
+  const fajr = resourceFor(n.fajrAdhanId || n.adhanId)
   if (std) out.push(adhanChannel(std, 'std'))
-  if (fajr) out.push(adhanChannel(fajr, 'fajr'))
+  if (fajr && fajr !== std) out.push(adhanChannel(fajr, 'fajr'))
+  else if (fajr) out.push(adhanChannel(fajr, 'fajr'))
   return out
 }
 
@@ -116,7 +108,7 @@ export async function ensureChannels(settings = {}) {
   const LN = await notifications()
   if (!LN?.createChannel) return false
 
-  const wanted = await wantedChannels(settings)
+  const wanted = wantedChannels(settings)
   const keep = new Set(wanted.map(c => c.id))
 
   for (const c of wanted) {
@@ -165,8 +157,8 @@ export async function scheduleNative(items, settings) {
 
   const n = settings.notifications || {}
   const place = settings.location?.label
-  const stdRes = await resourceFor(n.adhanId)
-  const fajrRes = await resourceFor(n.fajrAdhanId || n.adhanId)
+  const stdRes = resourceFor(n.adhanId)
+  const fajrRes = resourceFor(n.fajrAdhanId || n.adhanId)
 
   // The mode travels on the item, so each prayer lands on the channel matching
   // its own setting. Fajr routes to its own channel only when the adhan is what

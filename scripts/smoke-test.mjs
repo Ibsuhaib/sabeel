@@ -3,7 +3,7 @@
 // destructure, so a renamed field fails here instead of as a blank screen.
 import fs from 'node:fs'
 import path from 'node:path'
-import { DATA, log } from './_util.mjs'
+import { DATA, ROOT, log } from './_util.mjs'
 
 let pass = 0
 const fails = []
@@ -226,6 +226,23 @@ check('hadith book files match the index shape the pages destructure', () => {
         }
       }
     }
+  }
+})
+
+// The app derives an adhan's Android raw-resource name from its id rather than
+// reading a manifest, because android-setup runs after `cap sync` has copied the
+// web assets — a file it wrote would never reach the APK. That only holds while
+// the two spellings agree, so they are compared here.
+check('every adhan is installed under the name the app will ask for', () => {
+  const res = path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'raw')
+  if (!fs.existsSync(res)) return                       // android platform not present
+  const a = read('adhan.json')
+  const installed = fs.readdirSync(res)
+  const appName = id => 'adhan_' + String(id).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+  for (const rec of a.adhans || []) {
+    const want = appName(rec.id)
+    const found = installed.some(f => f.replace(/\.[^.]+$/, '') === want)
+    assert(found, `adhan "${rec.id}" -> res/raw/${want}.* is missing; the app would ask for a sound that is not there`)
   }
 })
 
