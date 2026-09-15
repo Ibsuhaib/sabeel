@@ -109,12 +109,15 @@ export async function scheduleNative(items, settings) {
   await ensureChannels()
   try { await LN.cancel({ notifications: (await LN.getPending()).notifications || [] }) } catch { /* nothing pending */ }
 
-  const mode = settings.notifications?.sound || 'adhan'
   const place = settings.location?.label
-  // Fajr routes to its own channel only when the adhan is the chosen sound;
-  // a chime or silence is the same whatever the prayer.
-  const channelFor = item =>
-    mode === 'adhan' && item.prayer === 'fajr' ? CHANNELS.adhanFajr : (CHANNELS[mode] || CHANNELS.adhan)
+  // The mode travels on the item, so each prayer lands on the channel matching
+  // its own setting. Fajr routes to its own channel only when the adhan is what
+  // it is set to; a chime or silence is the same whatever the prayer.
+  const channelFor = item => {
+    const mode = item.sound || 'adhan'
+    if (mode === 'adhan' && item.prayer === 'fajr') return CHANNELS.adhanFajr
+    return CHANNELS[mode] || CHANNELS.adhan
+  }
 
   const payload = items.slice(0, 60).map(item => ({
     id: idFor(item),

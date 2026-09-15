@@ -57,9 +57,9 @@ export default function LocationPrompt({ what = 'Prayer times' }) {
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium">Use your exact location?</p>
           <p className="text-[11px] text-muted mt-1 leading-relaxed">
-            {what} currently comes from {settings.location.label} — the middle of the city,
-            which can be tens of kilometres from where you are standing. A fix from the
-            device is accurate to the spot.
+            Working from {settings.location.label} — the middle of the city, which can be
+            tens of kilometres from where you are standing. {what} would be more exact
+            with a fix from the device.
           </p>
 
           {error && <p className="text-[11px] text-amber-500 mt-2 leading-relaxed">{error}</p>}

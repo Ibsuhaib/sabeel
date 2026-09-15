@@ -12,6 +12,7 @@ import { prime, playBeep, playAdhan, stopSound, vibrate } from '../lib/sounds.js
 import AdhanPicker from '../components/AdhanPicker.jsx'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Empty } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import PrayerSound, { MODES } from '../components/PrayerSound.jsx'
 
 const SOUNDS = [
   { id: 'adhan', label: 'Adhan', note: 'The full call to prayer' },
@@ -20,6 +21,17 @@ const SOUNDS = [
 ]
 
 const REMINDERS = [0, 5, 10, 15, 20, 30]
+
+// What the "set them all" control should show: a mode when every fard prayer
+// agrees on one, and nothing when they differ — so a mixed set is never
+// misrepresented as uniform.
+function allSame(n) {
+  const modes = FARD.map(p => n.perPrayer?.[p.id] || 'adhan')
+  return modes.every(m => m === modes[0]) ? modes[0] : null
+}
+
+// Whether the adhan pickers are worth showing at all.
+const usesAdhan = n => FARD.some(p => (n.perPrayer?.[p.id] || 'adhan') === 'adhan')
 
 export default function Notifications() {
   const { settings, set } = useSettings()
@@ -55,8 +67,12 @@ export default function Notifications() {
 
   async function preview() {
     await prime()
-    if (n.sound === 'silent') { vibrate(); setMsg({ tone: 'ok', text: 'Silent mode — the phone vibrated if vibration is on and supported.' }); return }
-    if (n.sound === 'beep') { playBeep(); return }
+    // Preview what is actually set. When the prayers disagree there is no single
+    // sound to demonstrate, so the adhan stands in rather than a stale global.
+    const mode = allSame(n) || 'adhan'
+    if (mode === 'off') { setMsg({ tone: 'ok', text: 'Every prayer is set to Off, so nothing would sound.' }); return }
+    if (mode === 'silent') { vibrate(); setMsg({ tone: 'ok', text: 'Silent mode — the phone vibrated if vibration is on and supported.' }); return }
+    if (mode === 'beep') { playBeep(); return }
     const file = adhans?.adhans?.[0]?.file
     const el = await playAdhan({ adhanFile: file, useCustom: n.useCustomAdhan, volume: n.volume ?? 1 })
     if (!el) setMsg({ tone: 'warn', text: 'The browser blocked audio. Tap anywhere on the page first, then try again.' })
@@ -145,9 +161,19 @@ export default function Notifications() {
           {n.enabled && (
             <>
               <Section title="Sound">
+                <p className="px-4 -mt-1 mb-2 text-[11px] text-muted leading-relaxed">
+                  Each prayer has its own setting, changed from the prayer list or below.
+                  This sets every prayer at once.
+                </p>
                 <Choice
-                  columns={3} value={n.sound || 'adhan'}
-                  onChange={v => { patch({ sound: v }); if (v !== 'adhan') stopSound() }}
+                  columns={3} value={allSame(n) || ''}
+                  onChange={v => {
+                    patch({
+                      sound: v,
+                      perPrayer: Object.fromEntries(FARD.map(p => [p.id, v]))
+                    })
+                    if (v !== 'adhan') stopSound()
+                  }}
                   options={SOUNDS}
                 />
                 <div className="px-4 mt-3 flex gap-2">
@@ -157,7 +183,7 @@ export default function Notifications() {
                   <Button variant="ghost" size="sm" onClick={stopSound}>Stop</Button>
                 </div>
 
-                {n.sound === 'adhan' && (
+                {usesAdhan(n) && (
                   <div className="mt-4 space-y-3">
                     <AdhanPicker
                       slot="default"
@@ -211,23 +237,24 @@ export default function Notifications() {
                 </div>
               </Section>
 
-              <Section title="Which prayers">
+              <Section title="Each prayer">
                 <Card className="mx-4 divide-y divide-line">
-                  {PRAYERS.map(p => {
-                    const on = p.isPrayer
-                      ? (n.perPrayer?.[p.id] !== false)
-                      : !!n.notifySunrise
-                    return (
-                      <Toggle
-                        key={p.id} checked={on}
-                        onChange={v => p.isPrayer
-                          ? patch({ perPrayer: { ...(n.perPrayer || {}), [p.id]: v } })
-                          : patch({ notifySunrise: v })}
-                        label={p.label}
-                        hint={p.isPrayer ? undefined : 'Not a prayer — the end of Fajr'}
-                      />
-                    )
-                  })}
+                  {PRAYERS.map(p => p.isPrayer ? (
+                    <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="flex-1 text-sm">{p.label}</span>
+                      <span className="text-[11px] text-muted">
+                        {MODES.find(m => m.id === (n.perPrayer?.[p.id] || 'adhan'))?.label}
+                      </span>
+                      <PrayerSound prayer={p.id} label={p.label} />
+                    </div>
+                  ) : (
+                    <Toggle
+                      key={p.id} checked={!!n.notifySunrise}
+                      onChange={v => patch({ notifySunrise: v })}
+                      label={p.label}
+                      hint="Not a prayer — the end of Fajr"
+                    />
+                  ))}
                 </Card>
               </Section>
 

@@ -7,6 +7,7 @@ import { hijri } from '../lib/hijri.js'
 import { store } from '../lib/store.js'
 import { Screen, Header, Card, Section, Sheet, IconButton, Button, Empty } from '../components/ui.jsx'
 import LocationPrompt from '../components/LocationPrompt.jsx'
+import PrayerSound from '../components/PrayerSound.jsx'
 import Icon from '../components/Icon.jsx'
 
 export default function Prayer() {
@@ -55,7 +56,12 @@ export default function Prayer() {
         title="Prayer"
         subtitle={settings.location.label}
         large
-        actions={<IconButton name="compass" label="Qibla" to="/qibla" />}
+        actions={
+          <>
+            <IconButton name="bell" label="Prayer notifications" to="/notifications" />
+            <IconButton name="compass" label="Qibla" to="/qibla" />
+          </>
+        }
       />
 
       <LocationPrompt what="Prayer times" />
@@ -72,56 +78,21 @@ export default function Prayer() {
       </div>
 
       {isToday && next && (
-        <div className="px-4 mt-4">
-          <Card className="p-4 text-center">
-            <div className="text-xs text-muted">{next.label}{next.isNextDay ? ' tomorrow' : ''} in</div>
-            <div className="text-3xl font-semibold text-brand tabular-nums mt-1">{fmtCountdown(next.time - now)}</div>
-            <div className="text-xs text-muted mt-1">{fmtTime(next.time)}</div>
-          </Card>
-        </div>
+        <NextPrayerCard next={next} now={now} previous={previousTime(t, next)} />
       )}
 
       <div className="px-4 mt-4 space-y-2">
-        {PRAYERS.map(p => {
-          const active = isToday && next?.id === p.id
-          const passed = t[p.id] < now && isToday
-          const state = todayLog[p.id]
-          return (
-            <Card key={p.id} className={`px-4 py-3 ${active ? 'border-brand/50' : ''}`}>
-              <div className="flex items-center gap-3">
-                <Icon
-                  name={p.id === 'sunrise' ? 'sunrise' : p.id === 'maghrib' ? 'sunset' : p.id === 'isha' ? 'moon' : 'prayer'}
-                  size={18}
-                  className={active ? 'text-brand' : passed ? 'text-muted/50' : 'text-muted'}
-                />
-                <span className={`flex-1 text-[15px] ${active ? 'text-brand font-medium' : passed ? 'text-muted' : ''}`}>
-                  {p.label}
-                  {!p.isPrayer && <span className="text-[10px] text-muted ml-2">not a prayer</span>}
-                </span>
-                <span className={`tabular-nums text-[15px] ${active ? 'text-brand font-medium' : 'text-muted'}`}>
-                  {fmtTime(t[p.id])}
-                </span>
-              </div>
-
-              {p.isPrayer && (
-                <div className="flex gap-1.5 mt-3">
-                  {[
-                    ['jamaah', 'In jamaah'],
-                    ['alone', 'Prayed'],
-                    ['qada', 'Qada']
-                  ].map(([id, label]) => (
-                    <button
-                      key={id} onClick={() => mark(p.id, id)}
-                      className={`tap chip flex-1 py-1.5 rounded-lg text-[11px] border transition-colors ${
-                        state === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
-                      }`}
-                    >{label}</button>
-                  ))}
-                </div>
-              )}
-            </Card>
-          )
-        })}
+        {PRAYERS.map(p => (
+          <PrayerRow
+            key={p.id} p={p}
+            time={t[p.id]}
+            active={isToday && next?.id === p.id}
+            passed={isToday && t[p.id] < now}
+            state={todayLog[p.id]}
+            onMark={mark}
+            showTracker={isToday || offset < 0}
+          />
+        ))}
       </div>
 
       <Section title="Sunnah windows">
@@ -149,6 +120,119 @@ export default function Prayer() {
 
       <WhySheet open={why} onClose={() => setWhy(false)} settings={settings} />
     </Screen>
+  )
+}
+
+// The time the current window opened, so the hero can show how far through it we
+// are. Without it the countdown is a number with no sense of scale.
+function previousTime(t, next) {
+  const order = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']
+  const i = order.indexOf(next.id)
+  if (i > 0) return t[order[i - 1]]
+  return t.isha instanceof Date ? new Date(t.isha.getTime() - 86400000) : null
+}
+
+// One glyph per prayer, all different. Fajr and Sunrise sharing a sunrise mark
+// made the two rows read as duplicates of each other at a glance.
+const GLYPH = {
+  fajr: 'dawn', sunrise: 'sunrise', dhuhr: 'sun',
+  asr: 'sunLow', maghrib: 'sunset', isha: 'moon'
+}
+
+function NextPrayerCard({ next, now, previous }) {
+  const total = previous ? next.time - previous : null
+  const done = total ? Math.min(1, Math.max(0, (now - previous) / total)) : 0
+
+  return (
+    <div className="px-4 mt-4">
+      <div className="relative overflow-hidden rounded-3xl border border-brand/30 bg-gradient-to-b from-brand/[0.13] to-surf px-5 pt-5 pb-4">
+        <div className="flex items-start gap-3">
+          <span className="w-11 h-11 rounded-2xl bg-brand/15 text-brand grid place-items-center shrink-0">
+            <Icon name={GLYPH[next.id] || 'prayer'} size={22} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-wider text-brand/80">
+              Next{next.isNextDay ? ' · tomorrow' : ''}
+            </p>
+            <p className="text-lg font-semibold leading-tight mt-0.5">{next.label}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[11px] text-muted">at</p>
+            <p className="text-[15px] font-medium tabular-nums">{fmtTime(next.time)}</p>
+          </div>
+        </div>
+
+        <p className="text-[2.6rem] leading-none font-semibold text-brand tabular-nums mt-4 text-center">
+          {fmtCountdown(next.time - now)}
+        </p>
+
+        {total > 0 && (
+          <div className="mt-4">
+            <div className="h-1.5 rounded-full bg-bg overflow-hidden">
+              <div
+                className="h-full rounded-full bg-brand/70 transition-[width] duration-1000 ease-linear"
+                style={{ width: `${(done * 100).toFixed(2)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted mt-1.5 tabular-nums">
+              <span>{fmtTime(previous)}</span>
+              <span>{fmtTime(next.time)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const TRACK = [['jamaah', 'In jamaah'], ['alone', 'Prayed'], ['qada', 'Qada']]
+
+function PrayerRow({ p, time, active, passed, state, onMark, showTracker }) {
+  return (
+    <div className={`rounded-2xl border transition-colors ${
+      active ? 'border-brand/50 bg-brand/[0.06]' : 'border-line bg-surf'
+    }`}>
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${
+          active ? 'bg-brand/15 text-brand' : passed ? 'bg-bg text-muted/50' : 'bg-bg text-muted'
+        }`}>
+          <Icon name={GLYPH[p.id] || 'prayer'} size={17} />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className={`block text-[15px] leading-tight ${
+            active ? 'text-brand font-medium' : passed ? 'text-muted' : ''
+          }`}>{p.label}</span>
+          {!p.isPrayer && <span className="block text-[10px] text-muted mt-0.5">Not a prayer — the Fajr window closes</span>}
+          {p.isPrayer && state && (
+            <span className="block text-[10px] text-brand/80 mt-0.5">
+              {TRACK.find(([id]) => id === state)?.[1]}
+            </span>
+          )}
+        </span>
+
+        <span className={`tabular-nums text-[15px] shrink-0 ${
+          active ? 'text-brand font-semibold' : passed ? 'text-muted/70' : 'text-muted'
+        }`}>{fmtTime(time)}</span>
+
+        {p.isPrayer
+          ? <PrayerSound prayer={p.id} label={p.label} />
+          : <span className="w-9 shrink-0" />}
+      </div>
+
+      {p.isPrayer && showTracker && (
+        <div className="flex gap-1.5 px-3.5 pb-3">
+          {TRACK.map(([id, label]) => (
+            <button
+              key={id} onClick={() => onMark(p.id, id)}
+              className={`tap chip flex-1 py-1.5 rounded-lg text-[11px] border transition-colors ${
+                state === id ? 'border-brand bg-brand/10 text-brand' : 'border-line text-muted'
+              }`}
+            >{label}</button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

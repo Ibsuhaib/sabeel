@@ -17,6 +17,7 @@
 // There is deliberately no push server: that would mean a backend, an account,
 // and sending someone's prayer times off their phone.
 import { timesFor, PRAYERS, FARD } from './prayer.js'
+import { prayerSound } from './settings.jsx'
 import { dateKey, fmtTime } from './format.js'
 import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission } from './native.js'
 
@@ -89,20 +90,24 @@ export function upcoming(settings, from = new Date()) {
 
     for (const p of PRAYERS) {
       if (!p.isPrayer && !n.notifySunrise) continue
-      if (n.perPrayer && n.perPrayer[p.id] === false) continue
+      // Each prayer carries its own sound mode, so the schedule records it on the
+      // item — that is what lets one prayer sound the adhan while the next only
+      // chimes, which a single global setting could never express.
+      const sound = p.isPrayer ? prayerSound(settings, p.id) : 'silent'
+      if (sound === 'off') continue
 
       const at = t[p.id]
       if (!(at instanceof Date) || Number.isNaN(at.getTime())) continue
 
       if (at > from && at - from < HORIZON_HOURS * 3600000) {
-        out.push({ id: `${key}:${p.id}`, prayer: p.id, label: p.label, at, kind: 'adhan' })
+        out.push({ id: `${key}:${p.id}`, prayer: p.id, label: p.label, at, kind: 'adhan', sound })
       }
 
       const mins = Number(n.reminderMinutes) || 0
       if (mins > 0) {
         const early = new Date(at.getTime() - mins * 60000)
         if (early > from && early - from < HORIZON_HOURS * 3600000) {
-          out.push({ id: `${key}:${p.id}:pre`, prayer: p.id, label: p.label, at: early, kind: 'reminder', minutes: mins })
+          out.push({ id: `${key}:${p.id}:pre`, prayer: p.id, label: p.label, at: early, kind: 'reminder', minutes: mins, sound })
         }
       }
     }
@@ -129,7 +134,7 @@ async function show(item, settings) {
     // the same way.
     requireInteraction: true,
     renotify: false,
-    silent: (settings.notifications?.sound === 'silent') && !settings.notifications?.systemSound,
+    silent: item.sound === 'silent' && !settings.notifications?.systemSound,
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     timestamp: item.at.getTime(),
@@ -248,12 +253,13 @@ export async function catchUp(settings, { windowMinutes = 30, onFire } = {}) {
 
   let latest = null
   for (const p of FARD) {
-    if (n.perPrayer && n.perPrayer[p.id] === false) continue
+    const sound = prayerSound(settings, p.id)
+    if (sound === 'off') continue
     const at = t[p.id]
     const age = now - at
     if (age >= 0 && age <= windowMinutes * 60000) {
       const id = `${key}:${p.id}`
-      if (!alreadyFired(id)) latest = { id, prayer: p.id, label: p.label, at, kind: 'adhan' }
+      if (!alreadyFired(id)) latest = { id, prayer: p.id, label: p.label, at, kind: 'adhan', sound }
     }
   }
   if (!latest) return null

@@ -33,9 +33,41 @@ export const DEFAULTS = {
     vibrate: true,
     reminderMinutes: 0,        // "prayer is in N minutes" nudge, 0 = off
     notifySunrise: false,
-    perPrayer: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true }
+    // How each prayer announces itself: 'adhan' | 'beep' | 'silent' | 'off'.
+    // Per prayer rather than one global setting, because the same person often
+    // wants the adhan for Fajr and only a chime at work.
+    perPrayer: { fajr: 'adhan', dhuhr: 'adhan', asr: 'adhan', maghrib: 'adhan', isha: 'adhan' }
   },
   onboarded: false
+}
+
+export const SOUND_MODES = ['adhan', 'beep', 'silent', 'off']
+
+// `perPrayer` used to be a boolean per prayer, with one sound setting shared by
+// all of them. It now holds the sound mode itself, so an existing install has to
+// be carried across: a prayer that was on keeps whatever sound was global at the
+// time, and one that was off becomes 'off'.
+function migratePerPrayer(savedNotif) {
+  const saved = savedNotif.perPrayer || {}
+  const wasGlobal = SOUND_MODES.includes(savedNotif.sound) && savedNotif.sound !== 'off'
+    ? savedNotif.sound
+    : 'adhan'
+  const out = { ...DEFAULTS.notifications.perPrayer }
+  for (const [id, v] of Object.entries(saved)) {
+    if (!(id in out)) continue
+    if (v === true) out[id] = wasGlobal
+    else if (v === false) out[id] = 'off'
+    else if (SOUND_MODES.includes(v)) out[id] = v
+  }
+  return out
+}
+
+/** The sound mode for one prayer, honouring the master switch. */
+export function prayerSound(settings, prayerId) {
+  const n = settings?.notifications
+  if (!n?.enabled) return 'off'
+  const v = n.perPrayer?.[prayerId]
+  return SOUND_MODES.includes(v) ? v : 'adhan'
 }
 
 const Ctx = createContext(null)
@@ -54,7 +86,7 @@ function load() {
       notifications: {
         ...DEFAULTS.notifications,
         ...savedNotif,
-        perPrayer: { ...DEFAULTS.notifications.perPrayer, ...(savedNotif.perPrayer || {}) }
+        perPrayer: migratePerPrayer(savedNotif)
       }
     }
   } catch {

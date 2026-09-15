@@ -27,7 +27,7 @@ export function usePrayerNotifications(settings) {
 
     // Which prayer fired decides which adhan plays.
     const onFire = (item) => {
-      playFor(settings, { adhanFile: adhanFile.current, fajrFile: fajrFile.current, prayer: item?.prayer })
+      playFor(settings, { adhanFile: adhanFile.current, fajrFile: fajrFile.current, prayer: item?.prayer, mode: item?.sound })
     }
 
     // Anything that came due while the app was closed, then arm what is next.

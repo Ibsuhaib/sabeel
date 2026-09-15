@@ -8,6 +8,7 @@
 // Browsers block audio until the user has interacted with the page at least
 // once, so `prime()` is called from the tap that turns notifications on. That
 // unlocks the AudioContext for the rest of the session.
+import { prayerSound } from './settings.jsx'
 import { get, set } from 'idb-keyval'
 
 // Two independent slots. The Fajr adhan is not the same call: it carries the
@@ -132,11 +133,14 @@ export function vibrate(pattern = [200, 100, 200, 100, 400]) {
 
 // One entry point so callers never have to branch on the mode themselves.
 // `prayer` decides which adhan slot is used — Fajr has its own.
-export async function playFor(settings, { adhanFile, fajrFile, prayer } = {}) {
+export async function playFor(settings, { adhanFile, fajrFile, prayer, mode } = {}) {
   const n = settings.notifications || {}
   if (n.vibrate) vibrate()
-  if (n.sound === 'silent') return 'silent'
-  if (n.sound === 'beep') return playBeep() ? 'beep' : 'blocked'
+  // `mode` is the prayer's own setting, passed in by whoever is announcing it.
+  // Without one — a preview button, say — fall back to what this prayer is set to.
+  const sound = mode || prayerSound({ notifications: { ...n, enabled: true } }, prayer) || 'adhan'
+  if (sound === 'off' || sound === 'silent') return 'silent'
+  if (sound === 'beep') return playBeep() ? 'beep' : 'blocked'
 
   const isFajr = prayer === 'fajr'
   const slot = isFajr ? 'fajr' : 'default'
