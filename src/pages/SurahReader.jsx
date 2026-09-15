@@ -10,6 +10,8 @@ import { toArabicNumber } from '../lib/format.js'
 import { Loading, LoadError, Sheet, Toggle, Choice, IconButton, Button } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
 import DownloadAudio from '../components/DownloadAudio.jsx'
+import SwipePager from '../components/SwipePager.jsx'
+import { useReadingTimer } from '../lib/useReadingTimer.js'
 import Icon from '../components/Icon.jsx'
 
 const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
@@ -40,6 +42,9 @@ export default function SurahReader() {
 
   const audio = usePlayer()
   const containerRef = useRef(null)
+
+  // Time on this screen counts towards the reading streak.
+  useReadingTimer(true)
   const jumped = useRef(false)
 
   useEffect(() => { loadReciters().then(setCatalogue) }, [])
@@ -137,6 +142,13 @@ export default function SurahReader() {
         )}
       </div>
 
+      <SwipePager
+        pageKey={num}
+        canPrev={num > 1}
+        canNext={num < 114}
+        onPrev={() => nav(`/quran/${num - 1}`)}
+        onNext={() => nav(`/quran/${num + 1}`)}
+      >
       <div className="divide-y divide-line/60">
         {ayahs.map(a => {
           const id = `${num}:${a.v}`
@@ -195,6 +207,8 @@ export default function SurahReader() {
           )
         })}
       </div>
+
+      </SwipePager>
 
       <nav className="flex items-center justify-between gap-3 px-4 py-8">
         {num > 1

@@ -12,6 +12,7 @@ export const DEFAULTS = {
   showTranslation: true,
   showTransliteration: false,
   readerMode: 'scroll',          // scroll | mushaf (604-page Madani layout)
+  readingGoalMinutes: 10,        // the daily goal the reading streak is measured against
   translation: 'en',             // en = Saheeh International, e2 = Clear Quran
   reciter: 'Alafasy_128kbps',
   method: 'MuslimWorldLeague',

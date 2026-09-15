@@ -9,6 +9,9 @@ import { usePlayer, loadReciters } from '../lib/reciters.js'
 import { toArabicNumber } from '../lib/format.js'
 import { Loading, LoadError, Sheet, IconButton, Button, Choice } from '../components/ui.jsx'
 import { ReciterList } from '../components/Player.jsx'
+import SwipePager from '../components/SwipePager.jsx'
+import SurahBanner from '../components/SurahBanner.jsx'
+import { useReadingTimer } from '../lib/useReadingTimer.js'
 import Icon from '../components/Icon.jsx'
 
 const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
@@ -36,7 +39,10 @@ export default function Mushaf() {
   const [followRecitation, setFollowRecitation] = useState(true)
 
   const audio = usePlayer()
-  const touch = useRef(null)
+  const [autoScroll, setAutoScroll] = useState(false)
+
+  // Time on this screen counts towards the reading streak.
+  useReadingTimer(true)
 
   useEffect(() => { loadReciters().then(setCatalogue) }, [])
   useEffect(() => { store.bookmarksQuran().then(setBookmarks) }, [])
@@ -96,19 +102,8 @@ export default function Mushaf() {
     player.play(first.surah, first.v, surahInfo?.ayahs)
   }
 
-  function onTouchStart(e) { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
-  function onTouchEnd(e) {
-    if (!touch.current) return
-    const dx = e.changedTouches[0].clientX - touch.current.x
-    const dy = e.changedTouches[0].clientY - touch.current.y
-    touch.current = null
-    if (Math.abs(dx) < 60 || Math.abs(dy) > 70) return
-    // RTL: swiping left goes forward through the muṣḥaf.
-    go(dx < 0 ? 1 : -1)
-  }
-
   return (
-    <div className="min-h-full pb-32" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="min-h-full pb-36">
       <header className="sticky top-0 z-30 safe-t bg-bg/92 backdrop-blur-md border-b border-line">
         <div className="flex items-center gap-1 px-2 h-14">
           <IconButton name="back" label="Back to surah list" onClick={() => nav('/quran')} size={22} />
@@ -125,7 +120,14 @@ export default function Mushaf() {
         </div>
       </header>
 
-      <div className="px-4 pt-5">
+      <SwipePager
+        pageKey={page}
+        canPrev={page > 1}
+        canNext={page < TOTAL_PAGES}
+        onPrev={() => go(-1)}
+        onNext={() => go(1)}
+        className="px-4 pt-5"
+      >
         <div className="border border-gold/25 rounded-2xl px-4 py-6 bg-surf/40">
           <p className="ar" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
             {ayahs.map((a, i) => {
@@ -136,9 +138,7 @@ export default function Mushaf() {
                 <span key={id}>
                   {startsSurah && (
                     <span className="block my-5" style={{ textAlign: 'center' }}>
-                      <span className="block border-y border-gold/30 py-2 text-brand" style={{ fontSize: '0.72em' }}>
-                        {meta.surahs.find(s => s.n === a.surah)?.name}
-                      </span>
+                      <SurahBanner surah={meta.surahs.find(s => s.n === a.surah)} />
                       {a.surah !== 1 && a.surah !== 9 && (
                         <span className="block mt-4" style={{ fontSize: '0.86em' }}>{BISMILLAH}</span>
                       )}
@@ -168,7 +168,7 @@ export default function Mushaf() {
             <span className="text-[11px] text-muted tabular-nums">{info.p}</span>
           </div>
         </div>
-      </div>
+      </SwipePager>
 
       {selected && (
         <AyahBar
@@ -203,8 +203,18 @@ export default function Mushaf() {
       </nav>
 
       <p className="text-[11px] text-muted/60 text-center px-10 pb-4">
-        Swipe left for the next page, right to go back.
+        Swipe the page to turn it — left for the next, right to go back.
       </p>
+
+      <MushafBar
+        onContents={() => setSheet('jump')}
+        autoScroll={autoScroll}
+        onAutoScroll={() => setAutoScroll(v => !v)}
+        onPlay={playPage}
+        playing={audio.playing}
+        onPause={() => player.pause()}
+      />
+      <AutoScroller active={autoScroll} onEnd={() => { setAutoScroll(false); go(1) }} />
 
       <JumpSheet
         open={sheet === 'jump'} onClose={() => setSheet(null)}
@@ -396,3 +406,62 @@ function MushafSettings({ open, onClose, settings, set, follow, onFollow, onOpen
     </Sheet>
   )
 }
+
+/* ------------------------- reader bottom bar ----------------------------- */
+
+// The four things you reach for while actually reading a page, on the thumb
+// rail rather than buried in the header.
+function MushafBar({ onContents, autoScroll, onAutoScroll, onPlay, playing, onPause }) {
+  const items = [
+    { icon: 'book', label: 'Contents', onClick: onContents },
+    { icon: 'autoscroll', label: 'Auto scroll', onClick: onAutoScroll, active: autoScroll },
+    { icon: playing ? 'pause' : 'play', label: playing ? 'Pause' : 'Play', onClick: playing ? onPause : onPlay, active: playing },
+    { icon: 'calendar', label: 'Plan', to: '/khatm' }
+  ]
+  return (
+    <nav className="fixed bottom-0 inset-x-0 z-30 bg-bg/95 backdrop-blur-md border-t border-line safe-b">
+      <div className="flex max-w-2xl mx-auto">
+        {items.map(i => {
+          const inner = (
+            <>
+              <Icon name={i.icon} size={19} />
+              <span className="text-[10px]">{i.label}</span>
+            </>
+          )
+          const cls = `tap flex-1 flex flex-col items-center gap-1 py-2.5 min-h-[56px] ${i.active ? 'text-brand' : 'text-muted'}`
+          return i.to
+            ? <Link key={i.label} to={i.to} className={cls}>{inner}</Link>
+            : <button key={i.label} onClick={i.onClick} className={cls}>{inner}</button>
+        })}
+      </div>
+    </nav>
+  )
+}
+
+// Creeps the page down at a readable pace, and turns to the next page when it
+// reaches the bottom so a whole juz can be read without touching the screen.
+function AutoScroller({ active, onEnd }) {
+  useEffect(() => {
+    if (!active) return
+    let raf = 0
+    let last = performance.now()
+    const PX_PER_SEC = 22
+
+    const step = now => {
+      const dt = now - last
+      last = now
+      window.scrollBy(0, (PX_PER_SEC * dt) / 1000)
+      const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4
+      if (atEnd) { onEnd?.(); return }
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+
+    // Any touch pauses it — you have taken over.
+    const stop = () => { cancelAnimationFrame(raf); onEnd?.() }
+    window.addEventListener('pointerdown', stop, { once: true })
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('pointerdown', stop) }
+  }, [active, onEnd])
+  return null
+}
+

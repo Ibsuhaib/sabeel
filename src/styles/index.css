@@ -90,6 +90,13 @@ body {
   contain-intrinsic-size: auto 240px;
 }
 
+/* The same trick for long index lists — 604 pages and 556 rukus are otherwise
+   a lot of layout for a cheap phone to do at once. */
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

@@ -122,6 +122,11 @@ async function main() {
     pages,
     juzStart: JUZ_START,
     pageStart: PAGE_START,
+    // The index screen lets you browse by any of these, so each needs its own
+    // list of starting ayahs rather than only a per-ayah number.
+    hizbStart: HIZB_START,
+    rukuStart: RUKU_START,
+    manzilStart: MANZIL_START,
     sajdas: [...SAJDAH.entries()].map(([k, kind]) => ({ key: k, kind })),
     // Keys here must match the per-ayah field names (ar/en/e2/tr) so the reader
     // can look up a label by the same key it renders text from.

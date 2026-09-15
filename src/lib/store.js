@@ -10,7 +10,8 @@ const K = {
   tasbih: 'tasbih',
   notes: 'notes',
   khatm: 'khatm',
-  offlineCollections: 'offline.hadith'
+  offlineCollections: 'offline.hadith',
+  recents: 'recents'
 }
 
 export const store = {
@@ -43,8 +44,27 @@ export const store = {
   // tap. Opt-out lives on the plan itself.
   async setLastRead(v) {
     await set(K.lastRead, { ...v, at: Date.now() })
+    await this.pushRecent(v)
     if (v?.page) await this.syncKhatm(v.page)
     return v
+  },
+
+  // A short history of where you have been reading, so the Quran screen can
+  // offer more than one place to pick up — which is how people actually read,
+  // a little of one surah and a little of another.
+  async recents() { return (await get(K.recents)) || [] },
+
+  async pushRecent(v) {
+    if (!v?.surah) return []
+    const list = await this.recents()
+    const id = `${v.surah}:${v.ayah}`
+    // Collapse consecutive entries in the same surah rather than filling the
+    // list with every ayah scrolled past.
+    const filtered = list.filter(r => r.surah !== v.surah)
+    filtered.unshift({ id, surah: v.surah, ayah: v.ayah, page: v.page, at: Date.now() })
+    const trimmed = filtered.slice(0, 6)
+    await set(K.recents, trimmed)
+    return trimmed
   },
 
   async syncKhatm(page) {

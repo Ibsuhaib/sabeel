@@ -1,13 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon.jsx'
 
-// Five tabs. Not six. Everything else lives under More — Part 6.
+// Home first, then the four things opened daily. Everything else lives in the
+// menu behind the header button — the same shape the reference apps use, and
+// the reason five tabs is still enough.
 const TABS = [
+  { to: '/', icon: 'home', label: 'Home', end: true },
   { to: '/quran', icon: 'quran', label: 'Quran' },
   { to: '/hadith', icon: 'hadith', label: 'Hadith' },
   { to: '/prayer', icon: 'prayer', label: 'Prayer' },
-  { to: '/dua', icon: 'dua', label: 'Dua' },
-  { to: '/more', icon: 'more', label: 'More' }
+  { to: '/dua', icon: 'dua', label: 'Dua' }
 ]
 
 export default function TabBar() {
@@ -17,20 +19,20 @@ export default function TabBar() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-line safe-b">
-      <div className="flex max-w-2xl mx-auto">
+      <div className="flex max-w-2xl mx-auto px-1">
         {TABS.map(t => (
           <NavLink
-            key={t.to} to={t.to}
-            className={({ isActive }) =>
-              `tap flex-1 flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${
-                isActive ? 'text-brand' : 'text-muted'
-              }`
-            }
+            key={t.to} to={t.to} end={t.end}
+            className="tap flex-1 flex flex-col items-center gap-1 py-2 min-h-[56px]"
           >
             {({ isActive }) => (
               <>
-                <Icon name={t.icon} size={22} strokeWidth={isActive ? 1.9 : 1.5} />
-                {t.label}
+                {/* The pill behind the active icon is what makes the current
+                    tab readable at a glance on a small screen. */}
+                <span className={`px-4 py-1 rounded-full transition-colors ${isActive ? 'bg-brand/15 text-brand' : 'text-muted'}`}>
+                  <Icon name={t.icon} size={21} strokeWidth={isActive ? 2 : 1.5} />
+                </span>
+                <span className={`text-[10px] font-medium ${isActive ? 'text-brand' : 'text-muted'}`}>{t.label}</span>
               </>
             )}
           </NavLink>

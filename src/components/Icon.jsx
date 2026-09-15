@@ -36,7 +36,10 @@ const P = {
   reset: 'M4 10a8 8 0 1 1 1 5M4 5v5h5',
   filter: 'M4 5h16l-6 7v6l-4 2v-8L4 5Z',
   note: 'M5 4h11l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3 7h8m-8 4h5',
-  flag: 'M5 21V4m0 0h11l-2 4 2 4H5'
+  flag: 'M5 21V4m0 0h11l-2 4 2 4H5',
+  bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+  autoscroll: 'M7 5l5 5 5-5M7 13l5 5 5-5',
+  menu: 'M4 7h16M4 12h16M4 17h16'
 }
 
 export default function Icon({ name, size = 20, className = '', strokeWidth = 1.6, fill = 'none' }) {
