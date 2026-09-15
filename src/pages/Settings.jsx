@@ -175,9 +175,9 @@ export default function Settings() {
             nothing, whereas the same five icons drawn four ways tell you at once. */}
         <div className="px-4 pb-3">
           <p className="text-[11px] text-muted mb-2">Icons</p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-1.5">
             {ICON_STYLES.map(o => {
-              const active = (settings.iconStyle || 'duotone') === o.id
+              const active = (settings.iconStyle || 'illustrated') === o.id
               return (
                 <button
                   key={o.id}
@@ -188,8 +188,8 @@ export default function Settings() {
                   }`}
                 >
                   <span className="flex items-center justify-center gap-1">
-                    {['quran', 'prayer', 'dua'].map(n => (
-                      <Icon key={n} name={n} size={17} style={o.id} />
+                    {['prayer', 'dua'].map(n => (
+                      <Icon key={n} name={n} size={16} style={o.id} />
                     ))}
                   </span>
                   <span className="block text-[10px] mt-1.5">{o.label}</span>

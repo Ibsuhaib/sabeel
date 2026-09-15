@@ -166,3 +166,16 @@ that erodes trust. If an authentic complete recording exists and can be used, op
 Items marked ⚠️ are shipped in good faith on the same basis as dozens of existing Islamic apps.
 That is an explanation, not a legal opinion. If a rights holder objects to any text here, it
 will be removed immediately — open an issue and it will be handled.
+
+## Icons
+
+| Source | Licence | Notes |
+| --- | --- | --- |
+| [Phosphor Icons](https://github.com/phosphor-icons/core) | ✅ **MIT** | The vector set, fetched at build time in four weights — regular, bold, fill, duotone — which is what lets the reader choose an icon style without four separate drawings existing. |
+| [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) | ✅ **MIT** | The illustrated 3D set, for the icons you navigate by. 🤲 *palms up together* is used for dua, never 🙏 *folded hands*: the latter is the añjali gesture, palms pressed flat, which is Hindu and Christian rather than Islamic. |
+| Kaaba, and the dua glyph in the vector set | — | Drawn for this project. No general icon set has a Kaaba, and every set that has praying hands has the wrong gesture. |
+
+**Rejected.** Stock illustrations supplied as style references for these icons —
+two of them still carrying a visible Shutterstock watermark (`2311211093`,
+`2581752311`) — were not used. They are the right *look*, and Fluent Emoji is
+that look under a licence that permits shipping it.

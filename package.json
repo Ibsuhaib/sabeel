@@ -14,7 +14,7 @@
     "data:dua": "node scripts/fetch-dua.mjs",
     "data:index": "node scripts/build-search-index.mjs",
     "data:verify": "node scripts/verify-integrity.mjs",
-    "data:all": "npm run data:quran && npm run data:layout && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:geomag && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons2 && npm run data:icons && npm run data:verify",
+    "data:all": "npm run data:quran && npm run data:layout && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:geomag && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons2 && npm run data:illus && npm run data:icons && npm run data:verify",
     "data:fonts": "node scripts/fetch-fonts.mjs",
     "data:icons": "node scripts/make-icons.mjs",
     "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs && node scripts/test-swipe.mjs && node scripts/audit-sources.mjs",
@@ -29,7 +29,8 @@
     "data:geomag": "node scripts/fetch-geomag.mjs",
     "check:sources": "node scripts/audit-sources.mjs",
     "data:layout": "node scripts/fetch-mushaf-layout.mjs",
-    "data:icons2": "node scripts/fetch-icons.mjs"
+    "data:icons2": "node scripts/fetch-icons.mjs",
+    "data:illus": "node scripts/fetch-illustrated.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

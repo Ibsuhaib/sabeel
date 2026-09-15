@@ -1,4 +1,5 @@
 import SET from '../generated/icons.json'
+import ILLUS from '../generated/icons3d.json'
 import { useIconStyle } from '../lib/settings.jsx'
 
 // The app's icons: Phosphor Icons (MIT), fetched and baked by
@@ -60,9 +61,28 @@ const LOCAL = {
   dua: [...HAND(false), ...HAND(true)]
 }
 
+const ILLUSTRATED = new Set(ILLUS.names)
+
 export default function Icon({ name, size = 20, className = '', style }) {
   const chosen = style || useIconStyle()
-  const weight = STYLE_TO_WEIGHT[chosen] || 'regular'
+
+  // The illustrated set is rendered art, not glyphs: full colour, with depth. It
+  // covers the things you navigate by — the tabs, the tiles — and nothing else,
+  // because a 3D render at 14px inside a line of text is mud. Anything it does
+  // not cover falls through to the vector set, which is the right shape for a
+  // small functional icon anyway.
+  if (chosen === 'illustrated' && ILLUSTRATED.has(name)) {
+    return (
+      <img
+        src={`icons3d/${name}.png`}
+        width={size} height={size} alt="" aria-hidden="true" draggable="false"
+        className={className}
+        style={{ display: 'block', objectFit: 'contain' }}
+      />
+    )
+  }
+
+  const weight = STYLE_TO_WEIGHT[chosen === 'illustrated' ? 'duotone' : chosen] || 'regular'
 
   const entry = SET.icons[name]
   // Fall back to the regular weight, then to a local drawing, rather than

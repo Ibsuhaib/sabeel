@@ -7,7 +7,7 @@ export const DEFAULTS = {
   // the app again, and warm paper is what a muṣḥaf looks like — a dark app is a
   // preference, not a first impression.
   theme: 'sepia',                // light | dark | sepia | black
-  iconStyle: 'duotone',          // line | bold | solid | duotone
+  iconStyle: 'illustrated',      // illustrated | duotone | solid | bold | line
   arabicFont: 'Amiri Quran',     // Amiri Quran | Scheherazade New | Noto Naskh Arabic
   // A medium default: 30px Arabic was set for a reading screen and is too big
   // for a list of duas or a hadith, where it pushes everything else off the

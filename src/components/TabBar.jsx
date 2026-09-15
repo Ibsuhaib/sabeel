@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon.jsx'
+import { useIconStyle } from '../lib/settings.jsx'
 
 // Home first, then the four things opened daily. Everything else lives in the
 // menu behind the header button — the same shape the reference apps use, and
@@ -14,6 +15,7 @@ const TABS = [
 
 export default function TabBar() {
   const { pathname } = useLocation()
+  const illustrated = useIconStyle() === 'illustrated'
   // The muṣḥaf page is sacred space — no chrome over the text while reading.
   if (/^\/quran\/\d+/.test(pathname) || /^\/mushaf/.test(pathname)) return null
 
@@ -37,7 +39,9 @@ export default function TabBar() {
                   }`}
                 >
                   <span className={`block transition-transform duration-200 ease-out ${isActive ? '-translate-y-px' : ''}`}>
-                    <Icon name={t.icon} size={21} style={isActive ? undefined : 'line'} />
+                    {/* Rendered art needs a few more pixels than a glyph does;
+                        at 21px a 3D icon is mud. */}
+                    <Icon name={t.icon} size={illustrated ? 26 : 21} />
                   </span>
                 </span>
                 <span className={`text-[10px] font-medium ${isActive ? 'text-brand' : 'text-muted'}`}>{t.label}</span>
