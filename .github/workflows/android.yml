@@ -85,7 +85,7 @@ jobs:
       # pointing at the newest build, under a stable filename, so the link in the
       # README never has to change:
       #
-      #   https://github.com/<owner>/<repo>/releases/latest/download/sabeel.apk
+      #   https://github.com/<owner>/<repo>/releases/download/latest/sabeel.apk
       - name: Publish the latest build
         if: github.ref_type != 'tag'
         env:
@@ -100,7 +100,7 @@ jobs:
           cat > notes.md <<'NOTES'
           Newest build of Sabeel, from COMMIT on BUILD_DATE.
 
-          **[Download sabeel.apk](https://github.com/REPO/releases/latest/download/sabeel.apk)** — SIZE_HERE
+          **[Download sabeel.apk](https://github.com/REPO/releases/download/latest/sabeel.apk)** — SIZE_HERE
 
           Open it on your Android phone. The first time, Android will ask you to
           allow installing from your browser or file manager, because this does

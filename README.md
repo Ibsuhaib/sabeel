@@ -9,9 +9,12 @@ Useful, given away, expecting nothing back. That is what this app is meant to be
 
 ## Download
 
-**[Download sabeel.apk for Android](https://github.com/Ibsuhaib/sabeel/releases/latest/download/sabeel.apk)** — or see [all releases](https://github.com/Ibsuhaib/sabeel/releases).
+**[Download sabeel.apk for Android](https://github.com/Ibsuhaib/sabeel/releases/download/latest/sabeel.apk)** — or see [all releases](https://github.com/Ibsuhaib/sabeel/releases).
 
 That link always points at the newest build; every push to `main` replaces it.
+(It addresses the tag named `latest` directly. The `releases/latest/download/`
+form looks equivalent and is not: GitHub resolves "latest release" by skipping
+pre-releases, and this one is marked as such, so that URL 404s.)
 Open the file on your phone and Android will ask, the first time, whether to
 allow installing from your browser or file manager — it says that because the
 app does not come from the Play Store, not because anything is wrong with it.
