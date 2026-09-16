@@ -128,7 +128,7 @@ function sharpenUpstream() {
       // that found words rather than a source. Such an entry ships as it always
       // should have: the dhikr, and no citation.
       if (!attributable(it.ar)) {
-        if (it.source) { it.citedAs = it.source; it.source = null; it.unverified = true }
+        if (it.source) { it.citedAs = it.source; it.source = null; it.unverified = true; it.common = true }
         vague++
         dirty = true
         continue

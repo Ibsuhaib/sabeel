@@ -98,7 +98,9 @@ export default function DuaCategory() {
                     // or in a collection it does not carry at all. Shown as a
                     // quotation rather than as a reference, so nobody types it
                     // into Find by reference and lands on an unrelated hadith.
-                    <Tooltip label="Quoted from the source this du'a came from. Its numbering follows a different edition, so it will not match this app's hadith numbers.">
+                    <Tooltip label={d.common
+                      ? 'These words run through hundreds of narrations on every subject, so no single hadith number can be called their source. This is the attribution the collection carries.'
+                      : "Quoted from the source this du'a came from. Its numbering follows a different edition, so it will not match this app's hadith numbers."}>
                       <span className="text-[11px] text-muted/80 flex items-center gap-1.5 flex-1 min-w-0 italic">
                         <Icon name="info" size={12} className="shrink-0" />
                         <span className="truncate">Cited as {d.citedAs}</span>
