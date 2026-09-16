@@ -14,7 +14,7 @@ const SOURCES = [
   { what: 'Quran, Uthmani (Hafs)', who: 'Tanzil-derived text via the open Quran API', note: 'Verified: 114 surahs, 6,236 ayahs, checksummed at build time' },
   { what: 'Saheeh International', who: 'Umm Muhammad (Emily Assami, Mary Kennedy, Amatullah Bantley)', note: 'English translation' },
   { what: 'The Clear Quran', who: 'Dr. Mustafa Khattab', note: 'English translation' },
-  { what: 'Hadith collections', who: 'Open hadith API — Bukhari, Muslim, Abu Dawud, Tirmidhi, Nasa’i, Ibn Majah, Malik, Nawawi, Qudsi, Dehlawi', note: '36,512 narrations with gradings' },
+  { what: 'Hadith collections', who: 'Open hadith API — Bukhari, Muslim, Abu Dawud, Tirmidhi, Nasa’i, Ibn Majah, Malik, Nawawi, Qudsi, Dehlawi', note: '36,104 narrations with gradings' },
   { what: 'Dua and adhkar', who: 'fitrahive/dua-dhikr', note: 'Arabic, transliteration, English, with source attribution' },
   { what: '99 Names', who: 'Aladhan asma al-husna', note: 'Arabic, transliteration, English meaning' },
   { what: 'Prayer times', who: 'adhan-js by Batoul Apps', note: 'MIT — computed on device, no network' },
@@ -70,6 +70,19 @@ export default function About() {
           <p>
             <strong className="text-ink">Where schools differ, both are shown.</strong>{' '}
             The Asr madhab setting is a choice you make, not one the app makes for you.
+          </p>
+          <p>
+            <strong className="text-ink">404 numbers are missing from the source data.</strong>{' '}
+            The collections are fetched complete and their numbering is verified unbroken, but 404
+            entries arrive carrying a number and no text at all. They are not shown and not counted,
+            which is why the total here is 36,104 rather than the 36,512 numbers the collections
+            span. Looking one of those numbers up finds nothing, rather than something else.
+          </p>
+          <p>
+            <strong className="text-ink">A du'a is cited only when the words identify a narration.</strong>{' '}
+            Short phrases such as the tasbīh run through hundreds of hadith on every subject, so no
+            number can be said to be their source. Those are shown with the attribution their
+            collection carries and no reference to look up.
           </p>
         </Card>
       </Section>

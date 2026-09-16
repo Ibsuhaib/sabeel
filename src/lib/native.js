@@ -191,7 +191,7 @@ export async function scheduleNative(items, settings) {
   if (!payload.length) return { scheduled: 0, native: true }
   try {
     await LN.schedule({ notifications: payload })
-    return { scheduled: payload.length, native: true, mode }
+    return { scheduled: payload.length, native: true }
   } catch (e) {
     return { scheduled: 0, native: true, error: e.message }
   }

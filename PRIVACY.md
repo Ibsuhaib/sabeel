@@ -39,7 +39,7 @@ works fully either way.
 
 ## What the app connects to
 
-Sabeel works offline. The Quran, all 36,512 hadith, the duas, prayer
+Sabeel works offline. The Quran, all 36,104 hadith, the duas, prayer
 calculation, the adhan recordings and the fonts are inside the app when you
 install it.
 

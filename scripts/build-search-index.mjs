@@ -48,7 +48,13 @@ function hadithIndexes() {
       const f = path.join(DATA, 'hadith', c.id, `${b.n}.json`)
       if (!fs.existsSync(f)) continue
       const { hadiths } = JSON.parse(fs.readFileSync(f, 'utf8'))
-      for (const h of hadiths) rows.push({ n: h.n, b: b.n, t: clean(h.en) })
+      // Entries with no Arabic are holes in the source data and are filtered out
+      // of every screen by src/lib/data.js; indexing them would make a search hit
+      // land on a hadith the reader cannot then open.
+      for (const h of hadiths) {
+        if (!h.ar || !h.ar.trim()) continue
+        rows.push({ n: h.n, b: b.n, t: clean(h.en) })
+      }
     }
     total += writeJSON(path.join(DATA, 'hadith', c.id, '_search.json'), { rows })
   }

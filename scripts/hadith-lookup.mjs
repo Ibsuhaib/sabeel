@@ -44,6 +44,36 @@ export function loadCorpus() {
 
 export const corpusSize = () => loadCorpus().length
 
+// How many narrations contain this phrase.
+//
+// This is the difference between a citation and a coincidence. "سبحان الله" runs
+// through 172 narrations, nearly all of them about something else entirely, so a
+// number attached to it points at whichever one happened to sort first — for a
+// while this app cited the Treaty of Hudaybiyyah as the source of the tasbīh.
+// A seventeen-word dhikr also appears in dozens of places, but there it is the
+// same dhikr each time, and any of them is a true source for it.
+export function occurrences(probe) {
+  const needle = normalise(probe)
+  if (!needle) return 0
+  let n = 0
+  for (const h of loadCorpus()) if (h.norm.includes(needle)) n++
+  return n
+}
+
+// Whether a phrase is specific enough that a reference to it means anything.
+//
+// Four words is the floor because below it the phrase is ordinary speech that
+// appears inside narrations on every subject; above it, repetition across the
+// collections is the dhikr itself recurring, which is what a reference should
+// find. A phrase in three narrations or fewer identifies one regardless of length.
+export const MIN_WORDS = 4
+export function attributable(probe) {
+  const needle = normalise(probe)
+  if (!needle) return false
+  if (needle.split(' ').filter(Boolean).length >= MIN_WORDS) return true
+  return occurrences(needle) <= 3
+}
+
 // Grow a matched span out to word boundaries in the original text, then strip the
 // clause punctuation and direction marks the corpus uses around quoted speech —
 // otherwise a du'a ends up displayed with a stray full stop hanging off it.
@@ -64,7 +94,7 @@ function lift(h, from, to) {
  *                        how a long du'a is pulled out whole without pasting it all
  * @returns {{source,col,n,ar,exact}|{miss,near}}
  */
-export function locate(probe, tail, context = []) {
+export function locate(probe, tail, context = [], { scoreMisses = true } = {}) {
   const corpus = loadCorpus()
   const needle = normalise(probe)
   if (!needle) return { miss: 0 }
@@ -89,7 +119,11 @@ export function locate(probe, tail, context = []) {
   }
 
   // Not found. Score the near misses so the log can say how close it got — 0.9
-  // means a word differs, 0.2 means the phrase is simply wrong.
+  // means a word differs, 0.2 means the phrase is simply wrong. This walks the
+  // whole corpus once per word, which is far and away the most expensive thing
+  // here, so a caller that only wants to know whether the phrase is present at
+  // all asks for it to be skipped.
+  if (!scoreMisses) return { miss: 0 }
   const words = needle.split(' ')
   let best = { miss: 0 }
   for (const h of corpus) {

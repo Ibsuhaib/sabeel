@@ -219,7 +219,10 @@ check('hadith book files match the index shape the pages destructure', () => {
       assert(exists(f), `${f} missing`)
       const d = read(f)
       assert(d.book === b.n, `${f} has wrong book number`)
-      assert(Array.isArray(d.hadiths) && d.hadiths.length === b.count, `${f} count mismatch`)
+      // b.count is what the app can show, which is the file's entries minus the
+      // ones that arrive from upstream with no Arabic — see hasText in data.js.
+      const readable = d.hadiths.filter(h => h.ar && h.ar.trim()).length
+      assert(Array.isArray(d.hadiths) && readable === b.count, `${f} count mismatch: ${readable} readable vs index ${b.count}`)
       for (const h of d.hadiths.slice(0, 5)) {
         for (const k of ['n', 'an', 'ar', 'en', 'g', 'ref']) {
           assert(h[k] !== undefined, `${f} hadith ${h.n} missing "${k}"`)

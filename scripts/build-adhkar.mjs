@@ -10,7 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { DATA, writeJSON, log, kb } from './_util.mjs'
-import { locate, corpusSize } from './hadith-lookup.mjs'
+import { locate, corpusSize, attributable, occurrences } from './hadith-lookup.mjs'
 import { normaliseMapped, normalise } from './arabic.mjs'
 
 const QURAN = path.join(DATA, 'quran', 'surah')
@@ -101,7 +101,7 @@ function sharpenUpstream() {
   if (!fs.existsSync(indexFile)) return
   const cats = JSON.parse(fs.readFileSync(indexFile, 'utf8')).categories
 
-  let upgraded = 0, kept = 0
+  let upgraded = 0, kept = 0, vague = 0
   for (const c of cats) {
     const file = path.join(DATA, 'dua', `${c.slug}.json`)
     if (!fs.existsSync(file)) continue
@@ -119,7 +119,23 @@ function sharpenUpstream() {
       // 591" is the Fuad Abdul Baqi number for a hadith our copy calls Muslim
       // 1334 — so the app printed a reference that, looked up in its own hadith
       // section, produced an unrelated narration about the siwak.
-      const hit = locate(it.ar)
+      // A phrase too common to belong to any one narration gets no number.
+      //
+      // The tasbīh is two words. Those two words occur in 172 narrations, and
+      // taking the first of them produced "Sahih al-Bukhari 2731" under the
+      // tasbīh card — which is the Treaty of Hudaybiyyah. The dhikr is of course
+      // from the Sunnah; it is the *reference* that was invented, by a search
+      // that found words rather than a source. Such an entry ships as it always
+      // should have: the dhikr, and no citation.
+      if (!attributable(it.ar)) {
+        if (it.source) { it.citedAs = it.source; it.source = null; it.unverified = true }
+        vague++
+        dirty = true
+        continue
+      }
+
+      // Nothing here uses how near a miss was, so the scoring pass is skipped.
+      const hit = locate(it.ar, undefined, [], { scoreMisses: false })
       if (hit.exact) {
         if (it.source) it.citedAs = it.source      // keep what upstream said
         it.source = hit.source
@@ -141,6 +157,7 @@ function sharpenUpstream() {
     if (dirty) writeJSON(file, data)
   }
   log(`  upstream citations: ${upgraded} resolved to our own corpus, ${kept} kept as cited but not lookupable here`)
+  log(`  ${vague} too common to attribute to one narration — shown without a reference`)
 }
 
 function main() {
@@ -176,7 +193,14 @@ function main() {
           resolved++
         } else if (seed.find) {
           const hit = locate(seed.find, seed.to, seed.context)
-          if (hit.exact) {
+          // Same rule as upstream, with one exception: an entry that names
+          // `context` has been pinned to a narration deliberately, and the
+          // context words are what make it specific rather than the length of
+          // the du'a itself.
+          if (hit.exact && !seed.context && !attributable(hit.ar)) {
+            console.log(`    too common ${cat.slug}/${seed.title} — these words are in ${occurrences(hit.ar)} narrations, so no one of them is the source`)
+            unsourced++
+          } else if (hit.exact) {
             item.ar = hit.ar
             item.source = hit.source
             item.hadith = { col: hit.col, n: hit.n }

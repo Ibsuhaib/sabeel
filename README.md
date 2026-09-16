@@ -21,7 +21,7 @@ app does not come from the Play Store, not because anything is wrong with it.
 It is debug-signed for the same reason, so Android will also call the developer
 unknown until the project has a release keystore.
 
-Everything is inside the app: the Quran with the muṣḥaf page layout, all 36,512
+Everything is inside the app: the Quran with the muṣḥaf page layout, all 36,104
 hadith, the duas, prayer calculation, the adhan and the fonts. Only recitation
 streams, and whatever you play is kept on the device.
 
@@ -54,7 +54,7 @@ A pull request that breaks any of the six will not be merged, however good the f
 |---|---|
 | **Quran** | Full Uthmani (Hafs) text · Saheeh International + The Clear Quran · transliteration · **two reading modes: scrolling, or the 604-page Madani muṣḥaf** · bookmarks, private notes, last-read resume · surah, juz and page navigation · sajdah markers · 3 Arabic faces, adjustable size and line height |
 | **Recitation** | **42 reciters, including 8 imams of Masjid al-Haram and 4 of Masjid an-Nabawi** · persistent player that keeps going while you browse · pause, previous/next ayah, seek · **A→B ayah-range looping** · repeat 2×–∞ · speed 0.5×–2× · switch reciter mid-playback without losing your place |
-| **Hadith** | 36,512 narrations across 10 collections — the Kutub as-Sittah plus Muwatta Malik, 40 Nawawi, 40 Qudsi, 40 Shah Waliullah · Arabic + English · **grading with the grader named on every narration that has one** · full provenance · **look up any narration by reference (“bukhari 1302”)** · per-collection offline download |
+| **Hadith** | 36,104 narrations across 10 collections — the Kutub as-Sittah plus Muwatta Malik, 40 Nawawi, 40 Qudsi, 40 Shah Waliullah · Arabic + English · **grading with the grader named on every narration that has one** · full provenance · **look up any narration by reference (“bukhari 1302”)** · per-collection offline download |
 | **Notifications** | Adhan, chime or silent — your choice, per prayer · **a separate Fajr adhan**, because the Fajr call carries the tathwīb · the notification holds on screen until you have seen it · optional “prayer is in N minutes” reminder · vibration · load your own recording for either slot (stays on your device) · a test button and per-manufacturer guidance, because OEM battery managers are what actually break prayer alerts |
 | **Android app** | Capacitor project committed; prayers scheduled through Android's alarm manager so they fire in Doze, sound the adhan, and stay in the shade until dealt with · one notification channel per sound, with Fajr on its own · `npm run android:apk` once a JDK and the Android SDK are installed |
 | **Khatm planner** | Finish the Quran by a date — Ramadan (real Umm al-Qura dates), a preset, or any number of days · today's target adapts to what is left rather than nagging you with a fixed number · progress ring on Home |
@@ -95,7 +95,7 @@ Grab the APK from the [Releases page](../../releases), or from the
 download `sabeel-apk` under Artifacts. Open the `.apk` on your phone and allow installing from
 your browser when asked, since this is not distributed through the Play Store.
 
-That build is **fully offline**. The Quran, all 36,512 hadith, the duas, prayer calculation, the
+That build is **fully offline**. The Quran, all 36,104 hadith, the duas, prayer calculation, the
 Arabic fonts and the adhan are all inside the app — roughly 81 MB of data baked in. Only
 recitation streams, and anything you play is kept on the device afterwards.
 

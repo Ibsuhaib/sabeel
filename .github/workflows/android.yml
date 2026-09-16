@@ -107,7 +107,7 @@ jobs:
           not come from the Play Store.
 
           Everything is in the app already: the Quran with the 604-page muṣḥaf
-          layout, all 36,512 hadith, the duas, prayer calculation, the adhans and
+          layout, all 36,104 hadith, the duas, prayer calculation, the adhans and
           the fonts. Only recitation streams, and whatever you play is kept on
           the device.
 
@@ -143,7 +143,7 @@ jobs:
             need to allow installing from your browser or file manager the first
             time, because this is not distributed through the Play Store.
 
-            This build is **fully offline**: the Quran, all 36,512 hadith, duas,
+            This build is **fully offline**: the Quran, all 36,104 hadith, duas,
             prayer calculation, fonts and the adhan are inside the app. Only
             recitation streams, and anything you play is kept on the device.
 

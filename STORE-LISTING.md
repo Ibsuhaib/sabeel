@@ -53,7 +53,7 @@ WHY SABEEL IS DIFFERENT
 • No ads. Not now, not later, not "remove ads for $4.99".
 • No account. Nothing to sign up for, nothing to log in to.
 • No tracking. No analytics, no advertising SDKs, no data sold. There is no server — your prayer times and your location never leave your phone.
-• Works offline. The entire Quran, all 36,512 hadith, the duas, prayer calculation, the adhan and the fonts are inside the app.
+• Works offline. The entire Quran, all 36,104 hadith, the duas, prayer calculation, the adhan and the fonts are inside the app.
 • Open source. Every line can be inspected.
 
 
@@ -72,7 +72,7 @@ THE QURAN
 
 HADITH
 
-• 36,512 hadith across ten collections — Bukhari, Muslim, Abu Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah, Malik, Nawawi, Qudsi, Dehlawi
+• 36,104 hadith across ten collections — Bukhari, Muslim, Abu Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah, Malik, Nawawi, Qudsi, Dehlawi
 • Every hadith shows its grading and who graded it
 • Search by word or jump straight to a reference number
 • All of it offline
@@ -136,7 +136,7 @@ Overlay one line per screenshot. Order matters — most people see two.
 1. **The muṣḥaf page** — "The real muṣḥaf page. Line for line."
 2. **Prayer times** — "Prayer times, calculated on your phone."
 3. **Dua index** — "153 duas. Every one shows its source."
-4. **Hadith** — "36,512 hadith, with gradings. Offline."
+4. **Hadith** — "36,104 hadith, with gradings. Offline."
 5. **Qibla** — "Qibla, corrected to true north."
 6. **Reciters** — "42 reciters. Download and listen offline."
 

@@ -98,8 +98,30 @@ export async function juzSurahs(juz) {
 /* --------------------------------- Hadith --------------------------------- */
 
 export const hadithIndex = () => load('hadith/index.json')
-export const hadithBook = (collection, book) => load(`hadith/${collection}/${book}.json`)
 export const hadithSearchIndex = collection => load(`hadith/${collection}/_search.json`)
+
+// 408 entries across the collections arrive from the upstream dataset carrying a
+// number but no Arabic — 404 of them have no translation either. They are holes
+// in the source data, not hadith, and they were rendering as cards with a
+// reference and a blank body.
+//
+// The test is the Arabic, not the translation. Four of them do carry an English
+// rendering, and showing that alone would present a translation as though it were
+// the hadith, with nothing to check it against.
+//
+// They are kept in the files rather than deleted, because deleting them would
+// leave real gaps in the numbering and every reference after one would then be
+// ambiguous. They are filtered out here instead, at the one point every screen
+// loads a book through, so nothing downstream has to remember they exist. A
+// lookup by one of those numbers now finds nothing, which is the truthful
+// answer: this app has no text for it.
+export const hasText = h => Boolean(h.ar && h.ar.trim())
+
+export async function hadithBook(collection, book) {
+  const data = await load(`hadith/${collection}/${book}.json`)
+  const hadiths = (data.hadiths || []).filter(hasText)
+  return hadiths.length === data.hadiths?.length ? data : { ...data, hadiths }
+}
 
 export async function hadithCollection(id) {
   const idx = await hadithIndex()

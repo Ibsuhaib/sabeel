@@ -68,7 +68,7 @@ For CI, add four repository secrets instead — Settings → Secrets → Actions
 
 Play wants an **`.aab`**, not an APK. It has not accepted APKs for new apps
 since 2021 — it slices the bundle per device, which is worth a lot here given
-the app carries the whole Quran and 36,512 hadith.
+the app carries the whole Quran and 36,104 hadith.
 
 Run the **Play Store bundle** workflow in the Actions tab and give it a version
 name (`1.0.0`). It builds, tests, signs, and attaches the `.aab`.

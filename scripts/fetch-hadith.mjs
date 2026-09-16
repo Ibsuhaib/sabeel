@@ -25,6 +25,11 @@ const COLLECTIONS = [
 
 const SIX = new Set(['bukhari', 'muslim', 'abudawud', 'tirmidhi', 'nasai', 'ibnmajah'])
 
+// Mirrors hasText in src/lib/data.js: an entry with no Arabic is a hole in the
+// source data, not a hadith — the Arabic is the text, and a translation with
+// nothing behind it is not something to put in front of a reader.
+const hasText = h => Boolean(h.ar && h.ar.trim())
+
 async function main() {
   log('Sabeel \u00b7 Hadith pipeline')
   let total = 0
@@ -61,20 +66,28 @@ async function main() {
       // Section 0 is the compiler's introduction (the Muqaddimah in Muslim),
       // which upstream leaves untitled.
       const title = (sections[num] || '').trim() || (num === 0 ? 'Introduction' : `Book ${num}`)
-      if (!list.length) continue
+      // A book whose every entry is blank upstream is not a book to show.
+      if (!list.filter(hasText).length) continue
       total += writeJSON(path.join(DATA, 'hadith', c.id, `${num}.json`), { book: num, title, hadiths: list })
-      books.push({ n: num, title, count: list.length })
+      // Counted by what can actually be read, not by how many numbers the book
+      // spans. Upstream carries entries with no Arabic at all, and counting those
+      // would advertise a total the app cannot show. They stay in the file so the numbering around
+      // them is unbroken; src/lib/data.js filters them out of every screen.
+      books.push({ n: num, title, count: list.filter(hasText).length })
     }
 
-    const graded = en.hadiths.filter(h => h.grades?.length).length
+    const graded = [...byBook.values()].flat().filter(h => hasText(h) && h.g.length).length
+    const readable = [...byBook.values()].flat().filter(hasText).length
+    const blank = en.hadiths.length - readable
     index.push({
       ...c,
       inSixBooks: SIX.has(c.id),
       books,
-      totalHadith: en.hadiths.length,
+      totalHadith: readable,
+      blankInSource: blank,
       gradedCount: graded
     })
-    log(`${String(en.hadiths.length).padStart(6)} hadith \u00b7 ${books.length} books \u00b7 ${graded} graded`)
+    log(`${String(readable).padStart(6)} hadith \u00b7 ${books.length} books \u00b7 ${graded} graded${blank ? ` \u00b7 ${blank} blank upstream, not counted` : ''}`)
   }
 
   total += writeJSON(path.join(DATA, 'hadith', 'index.json'), {
