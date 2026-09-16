@@ -99,6 +99,7 @@ licences require.
 | islamcan.com adhan set | No muadhdhin named and no licence stated anywhere. |
 | [Call to prayer by Sabah Fakhry](https://commons.wikimedia.org/wiki/File:Call_to_prayer_by_Sabah_Fakhry.mp3) | The public-domain claim is sourced to a YouTube upload, which cannot grant it. |
 | [Islamic call to worship](https://commons.wikimedia.org/wiki/File:Islamic_call_to_worship.oga) | CC BY-SA 4.0 and looks ideal — but its own description says it is a talk *about* the adhan and its rulings, not a call to prayer. |
+| [Call to prayer from the Prophet's Mosque](https://commons.wikimedia.org/wiki/File:33937_ejaz215_call-to-prayer-from-the-prophet-s-mo.ogg) | Offered as CC BY 3.0 and exactly what people ask for. Its Vorbis tags name the performers: artist `مؤذنو المسجد النبوي` — the muadhdhins of Masjid an-Nabawi — and a named reciter. An uploader cannot license someone else's performance, so the CC mark on it means nothing. Caught by the tag screening in `fetch-adhan.mjs`. |
 | [Llamada a oración, Mezquita Hassan II](https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav) | Licence is fine, but it is a 30 MB ambient street recording from outside the mosque — not a usable notification sound. |
 
 **A warning for anyone adding another adhan.** Adhan audio is the easiest place in this project
@@ -179,3 +180,21 @@ will be removed immediately — open an issue and it will be handled.
 two of them still carrying a visible Shutterstock watermark (`2311211093`,
 `2581752311`) — were not used. They are the right *look*, and Fluent Emoji is
 that look under a licence that permits shipping it.
+
+
+### Why the adhans everyone knows are not here
+
+The muadhdhins of Masjid al-Haram and Masjid an-Nabawi, and the great Egyptian
+reciters, are the ones people actually want. Their recordings are copyrighted
+performances, held by the Saudi authorities or by the reciters' estates, and no
+amount of searching turns one into a free licence.
+
+What circulates instead is those recordings re-uploaded by third parties with a
+Creative Commons mark the uploader had no right to apply. Two of them have now
+been caught here — one by an ID3 tag naming a Karl Jenkins composition, one by a
+Vorbis tag naming the muadhdhins of the Prophet's Mosque. Both looked perfect
+until the metadata was read.
+
+So the app ships what can honestly be shipped, and supports adding your own
+adhan file, which stays on your device. If you own a recording you are entitled
+to use, that is the route.

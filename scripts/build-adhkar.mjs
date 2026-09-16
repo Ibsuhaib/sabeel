@@ -111,9 +111,14 @@ function sharpenUpstream() {
     for (const it of data.items) {
       // Anything the adhkar seed built already has an exact reference.
       if (it.hadith || it.quran || !it.ar) continue
-      // A citation that already names a number is precise enough.
-      if (it.source && /\d/.test(it.source)) continue
 
+      // Every upstream citation is re-derived, including the ones that already
+      // name a number. That number was the reason to skip them, and it was the
+      // wrong reason: hadith collections have several numbering schemes, and the
+      // dataset uses a different one from the corpus this app ships. Its "Muslim
+      // 591" is the Fuad Abdul Baqi number for a hadith our copy calls Muslim
+      // 1334 — so the app printed a reference that, looked up in its own hadith
+      // section, produced an unrelated narration about the siwak.
       const hit = locate(it.ar)
       if (hit.exact) {
         if (it.source) it.citedAs = it.source      // keep what upstream said
@@ -122,12 +127,20 @@ function sharpenUpstream() {
         upgraded++
         dirty = true
       } else if (it.source) {
+        // Not in our corpus — often because it cites a work we do not carry,
+        // like al-Adab al-Mufrad or Musnad Ahmad. The attribution is kept
+        // verbatim and flagged, so the app can present it as the dataset's own
+        // wording rather than as a number you could look up here.
+        it.citedAs = it.source
+        it.source = null
+        it.unverified = true
         kept++
+        dirty = true
       }
     }
     if (dirty) writeJSON(file, data)
   }
-  log(`  upstream citations: ${upgraded} given an exact reference, ${kept} left as the dataset stated them`)
+  log(`  upstream citations: ${upgraded} resolved to our own corpus, ${kept} kept as cited but not lookupable here`)
 }
 
 function main() {

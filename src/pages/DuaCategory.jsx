@@ -4,6 +4,7 @@ import { duaCategory } from '../lib/data.js'
 import { Screen, Header, Loading, LoadError, Card, IconButton } from '../components/ui.jsx'
 import { useData } from '../lib/useData.js'
 import Icon from '../components/Icon.jsx'
+import Tooltip from '../components/Tooltip.jsx'
 
 // Only worth a toggle if there is something behind it.
 const hasMore = d => Boolean(d.tr || d.en || d.benefits)
@@ -82,13 +83,27 @@ export default function DuaCategory() {
               {/* Where an entry has no recorded source, nothing is shown in its place —
                   no divider, no note. The footer only exists when it has something
                   to carry. */}
-              {(d.source || target > 1) && (
+              {(d.source || d.citedAs || target > 1) && (
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line/60">
                   {d.source ? (
+                    // Verified against the corpus in this app, so the number is
+                    // one you can actually look up here.
                     <span className="text-[11px] text-muted flex items-center gap-1.5 flex-1 min-w-0">
                       <Icon name="book" size={12} className="shrink-0" />
                       <span className="truncate">{d.source}</span>
                     </span>
+                  ) : d.citedAs ? (
+                    // Cited by the dataset this du'a came from, in a numbering
+                    // scheme that is not the one this app's hadith section uses —
+                    // or in a collection it does not carry at all. Shown as a
+                    // quotation rather than as a reference, so nobody types it
+                    // into Find by reference and lands on an unrelated hadith.
+                    <Tooltip label="Quoted from the source this du'a came from. Its numbering follows a different edition, so it will not match this app's hadith numbers.">
+                      <span className="text-[11px] text-muted/80 flex items-center gap-1.5 flex-1 min-w-0 italic">
+                        <Icon name="info" size={12} className="shrink-0" />
+                        <span className="truncate">Cited as {d.citedAs}</span>
+                      </span>
+                    </Tooltip>
                   ) : (
                     <span className="flex-1" />
                   )}

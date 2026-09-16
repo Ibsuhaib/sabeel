@@ -56,7 +56,15 @@ for (const cat of idx.categories) {
 
   for (const it of data.items) {
     checked++
-    if (!it.source) { unsourced++; continue }
+    if (!it.source) {
+      unsourced++
+      // A quotation must not be dressed up as a reference: it carries no number
+      // this app can resolve, so it has to be flagged for the UI to say so.
+      if (it.citedAs && !it.unverified) {
+        fail(`${cat.slug}/${it.id}: has citedAs but is not flagged unverified`)
+      }
+      continue
+    }
     sourced++
 
     // A hadith-backed entry must actually appear at the reference it names, with
@@ -94,11 +102,18 @@ for (const cat of idx.categories) {
       }
     }
 
-    // A citation naming only a collection came in with the upstream dataset.
-    // build-adhkar sharpens the ones whose words are in the corpus we ship; what
-    // is left cites collections we do not carry — Ahmad, Ibn Hibban, al-Hakim,
-    // al-Bayhaqi — so there is nothing here to check it against. That is a limit
-    // of our data, not a defect in the citation, so it is counted, not failed.
+    // The rule that matters: a printed source naming a number must be a number
+    // in THIS app's corpus.
+    //
+    // Hadith collections carry several numbering schemes. The dua dataset cites
+    // Sahih Muslim by one and this app indexes it by another, so a du'a printed
+    // "Muslim 591" sent anyone who typed it into Find by reference to an
+    // unrelated narration about the siwak. A citation is either resolved against
+    // our own corpus — in which case it has a `hadith` ref — or it is presented
+    // as a quotation in `citedAs` and never as a reference.
+    if (!it.hadith && !it.quran && /\d/.test(it.source)) {
+      fail(`${cat.slug}/${it.id}: prints "${it.source}" with a number but no verified reference`)
+    }
     if (!it.hadith && !it.quran && !/\d/.test(it.source)) collectionOnly++
   }
 }
