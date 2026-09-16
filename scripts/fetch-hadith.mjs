@@ -66,9 +66,14 @@ async function main() {
       // Section 0 is the compiler's introduction (the Muqaddimah in Muslim),
       // which upstream leaves untitled.
       const title = (sections[num] || '').trim() || (num === 0 ? 'Introduction' : `Book ${num}`)
-      // A book whose every entry is blank upstream is not a book to show.
-      if (!list.filter(hasText).length) continue
       total += writeJSON(path.join(DATA, 'hadith', c.id, `${num}.json`), { book: num, title, hadiths: list })
+
+      // The file is always written, even when every entry in it is blank
+      // upstream, because the numbering has to stay unbroken — a missing number
+      // is indistinguishable from a dropped one, and then no reference in the
+      // collection can be trusted. The book is simply left out of the index, so
+      // no screen offers a book with nothing in it to read.
+      if (!list.filter(hasText).length) continue
       // Counted by what can actually be read, not by how many numbers the book
       // spans. Upstream carries entries with no Arabic at all, and counting those
       // would advertise a total the app cannot show. They stay in the file so the numbering around
