@@ -91,7 +91,8 @@ PRAYER TIMES
 
 DUA AND DHIKR
 
-• 153 supplications: morning and evening adhkar, after salah, salawat, aurad, ruqyah, hajj and umrah, and dua for every situation
+• 167 supplications: morning and evening adhkar, after salah, tahajjud, tawba, salawat, aurad, hajj and umrah, and dua for every situation
+• Find one by how you feel or what has happened — anxious, angry, grateful, afraid, in debt, travelling — not only by which book it is in
 • Duas of the Prophets, from the Quran
 • Every single one shows where it comes from — the exact hadith reference or ayah. Nothing is printed without a source.
 • Tasbih counter and the 99 Names
@@ -135,7 +136,7 @@ Overlay one line per screenshot. Order matters — most people see two.
 
 1. **The muṣḥaf page** — "The real muṣḥaf page. Line for line."
 2. **Prayer times** — "Prayer times, calculated on your phone."
-3. **Dua index** — "153 duas. Every one shows its source."
+3. **Dua index** — "167 duas. Find one by how you feel."
 4. **Hadith** — "36,104 hadith, with gradings. Offline."
 5. **Qibla** — "Qibla, corrected to true north."
 6. **Reciters** — "42 reciters. Download and listen offline."

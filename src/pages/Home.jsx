@@ -5,13 +5,14 @@ import { nextPrayer, timesFor, PRAYERS } from '../lib/prayer.js'
 import { hijri, upcomingEvents, isRamadan } from '../lib/hijri.js'
 import { fmtTime, fmtCountdown } from '../lib/format.js'
 import { store } from '../lib/store.js'
-import { quranMeta } from '../lib/data.js'
+import { quranMeta, duaCollections } from '../lib/data.js'
 import { progress as khatmProgress } from '../lib/khatm.js'
 import { readLog, streak, secondsOn, fmtDuration, DEFAULT_GOAL_MIN } from '../lib/reading.js'
 import { Screen, Card, Section, IconButton, Button } from '../components/ui.jsx'
 import MenuSheet from '../components/MenuSheet.jsx'
 import ReadingJourney from '../components/ReadingJourney.jsx'
 import Icon from '../components/Icon.jsx'
+import CollectionScene from '../components/CollectionScene.jsx'
 
 // Surahs people actually open by name rather than by number.
 const QUICK_LINKS = [
@@ -24,6 +25,22 @@ const QUICK_LINKS = [
   { n: 112, label: 'Al-Ikhlas' }
 ]
 
+// Which collections to surface, and in what order. The hour decides only what
+// goes first — the rest is a fixed spread so the grid does not rearrange itself
+// under someone who is reaching for the card they saw a moment ago.
+const HOME_ORDER = ['anxious', 'istighfar', 'protection', 'grateful', 'success', 'family', 'health']
+
+function pickForNow(all, hour) {
+  if (!all.length) return []
+  const by = Object.fromEntries(all.map(c => [c.slug, c]))
+  const timely =
+    hour >= 22 || hour < 4 ? 'tahajjud'
+      : hour < 9 ? 'on-waking'
+        : hour >= 20 ? 'before-sleep'
+          : 'after-salah'
+  return [timely, ...HOME_ORDER].map(s => by[s]).filter(Boolean).slice(0, 8)
+}
+
 export default function Home() {
   const { settings } = useSettings()
   const [now, setNow] = useState(new Date())
@@ -32,6 +49,7 @@ export default function Home() {
   const [meta, setMeta] = useState(null)
   const [log, setLog] = useState(null)
   const [sheet, setSheet] = useState(null)
+  const [allCollections, setAllCollections] = useState([])
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -43,7 +61,13 @@ export default function Home() {
     store.khatm().then(p => setKhatm(p || null))
     quranMeta().then(setMeta).catch(() => {})
     readLog().then(setLog)
+    duaCollections().then(d => setAllCollections(d.collections)).catch(() => {})
   }, [])
+
+  // Eight of the twenty-four, with the one that suits the hour first. A grid of
+  // all of them is a wall; the rest are on the dua index, and the card that is
+  // actually useful right now should not be the ninth one down.
+  const collections = pickForNow(allCollections, now.getHours())
 
   const next = settings.location ? nextPrayer(settings, now) : null
   const today = settings.location ? timesFor(settings, now) : null
@@ -205,6 +229,33 @@ export default function Home() {
           ))}
         </div>
       </Section>
+
+      {/* Duas found by the hour or the feeling rather than by which book they
+          are in. The sections are still there under /dua; this is the other way
+          in, for someone who does not know that what they want is filed under
+          "situational". */}
+      {collections.length > 0 && (
+        <Section
+          title="Duas for…"
+          action={<Link to="/dua" className="tap text-[11px] text-brand">All duas</Link>}
+        >
+          <div className="grid grid-cols-2 gap-3 px-4">
+            {collections.map(c => (
+              <Link
+                key={c.slug} to={`/for/${c.slug}`}
+                className="tap relative rounded-2xl overflow-hidden aspect-[5/4] border border-line active:opacity-90"
+              >
+                <CollectionScene scene={c.scene} className="absolute inset-0 w-full h-full" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <span className="absolute inset-x-0 bottom-0 p-3">
+                  <span className="block text-white text-[15px] font-semibold leading-tight drop-shadow">{c.title}</span>
+                  <span className="block text-white/70 text-[10px] mt-0.5">{c.count} duas</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Quick access">
         <div className="grid grid-cols-4 gap-2 px-4">

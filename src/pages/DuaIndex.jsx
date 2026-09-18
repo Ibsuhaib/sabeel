@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
-import { duaIndex } from '../lib/data.js'
+import { duaIndex, duaCollections } from '../lib/data.js'
 import { useData } from '../lib/useData.js'
 import { Screen, Header, Loading, LoadError, Card, Section, IconButton } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import CollectionScene from '../components/CollectionScene.jsx'
 
 // Tools that are not a list of duas but belong on this screen — reached far more
 // often than anything buried in a menu.
@@ -45,6 +46,7 @@ function Tile({ c }) {
 
 export default function DuaIndex() {
   const { data: idx, error, retry } = useData(duaIndex, [], { label: 'the dua list' })
+  const { data: cols } = useData(duaCollections, [], { label: 'the collections' })
   if (error) return <LoadError message={error} onRetry={retry} back={false} />
   if (!idx) return <Loading />
 
@@ -68,8 +70,35 @@ export default function DuaIndex() {
         actions={<IconButton name="search" label="Search duas" to="/search?tab=dua" />}
       />
 
+      {/* The same duas, reachable by when you need one rather than by which
+          book it is in. Both ways in are real: the sections below are the
+          sources' own arrangement, this is an index over them. */}
+      {cols && cols.groups.map(g => {
+        const items = cols.collections.filter(c => c.group === g.id)
+        if (!items.length) return null
+        return (
+          <Section key={g.id} title={g.label}>
+            <div className="grid grid-cols-2 gap-3 px-4">
+              {items.map(c => (
+                <Link
+                  key={c.slug} to={`/for/${c.slug}`}
+                  className="tap relative rounded-2xl overflow-hidden aspect-[5/4] border border-line active:opacity-90"
+                >
+                  <CollectionScene scene={c.scene} className="absolute inset-0 w-full h-full" />
+                  <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <span className="absolute inset-x-0 bottom-0 p-3">
+                    <span className="block text-white text-[15px] font-semibold leading-tight drop-shadow">{c.title}</span>
+                    <span className="block text-white/70 text-[10px] mt-0.5">{c.count} duas</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Section>
+        )
+      })}
+
       {sections.map(s => (
-        <Section key={s.title} title={s.title}>
+        <Section key={s.title} title={`By section · ${s.title}`}>
           <div className="grid grid-cols-2 gap-2.5 px-4 stagger">
             {s.items.map(c => <Tile key={c.slug} c={c} />)}
           </div>

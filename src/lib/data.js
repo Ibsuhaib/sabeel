@@ -148,6 +148,7 @@ export const adhanCatalogue = () => load('adhan.json')
 
 export const duaIndex = () => load('dua/index.json')
 export const duaCategory = slug => load(`dua/${slug}.json`)
+export const duaCollections = () => load('dua/collections.json')
 export const asmaUlHusna = () => load('dua/asma-ul-husna.json')
 
 /* --------------------------------- Search --------------------------------- */

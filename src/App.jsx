@@ -25,6 +25,7 @@ const Khatm = lazy(() => import('./pages/Khatm.jsx'))
 const HadithCollection = lazy(() => import('./pages/HadithCollection.jsx'))
 const HadithBook = lazy(() => import('./pages/HadithBook.jsx'))
 const DuaCategory = lazy(() => import('./pages/DuaCategory.jsx'))
+const Collection = lazy(() => import('./pages/Collection.jsx'))
 const Names = lazy(() => import('./pages/Names.jsx'))
 const Tasbih = lazy(() => import('./pages/Tasbih.jsx'))
 const Qibla = lazy(() => import('./pages/Qibla.jsx'))
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/dua/names" element={<Names />} />
           <Route path="/dua/tasbih" element={<Tasbih />} />
           <Route path="/dua/:slug" element={<DuaCategory />} />
+          <Route path="/for/:slug" element={<Collection />} />
 
           <Route path="/more" element={<More />} />
           <Route path="/search" element={<Search />} />

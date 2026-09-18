@@ -322,6 +322,119 @@ export const CATEGORIES = [
         tr: 'Allahumma la ʿaysha illa ʿayshal-akhirah.',
         en: 'O Allah, there is no life but the life of the Hereafter.',
         note: 'Said by him ﷺ while digging the trench.'
+      },
+      {
+        title: 'When something good happens',
+        find: 'الحمد لله الذي بنعمته تتم الصالحات',
+        tr: 'Al-hamdu lillahilladhi bi-niʿmatihi tatimmus-salihat.',
+        en: 'All praise is for Allah, by whose favour good things are completed.'
+      },
+      {
+        title: 'To be helped to give thanks',
+        find: 'اللهم أعني على ذكرك وشكرك', to: 'وحسن عبادتك',
+        tr: 'Allahumma aʿinni ʿala dhikrika wa shukrika wa husni ʿibadatik.',
+        en: 'O Allah, help me to remember You, to thank You, and to worship You well.',
+        note: 'He ﷺ took Muʿadh by the hand, told him he loved him, and taught him never to leave this after any prayer.'
+      },
+      {
+        title: 'Facing people you are afraid of',
+        find: 'اللهم إنا نجعلك في نحورهم', to: 'شرورهم',
+        tr: 'Allahumma inna najʿaluka fi nuhurihim wa naʿudhu bika min shururihim.',
+        en: 'O Allah, we place You before them, and we seek refuge in You from their evil.'
+      },
+      {
+        title: 'Frightened in the night',
+        find: 'من غضبه وشر عباده', to: 'أن يحضرون',
+        tr: '…min ghadabihi wa sharri ʿibadihi wa min hamazatish-shayatini wa an yahdurun.',
+        en: '…from His anger, from the evil of His servants, from the promptings of the devils, and from their presence.'
+      },
+      {
+        title: 'Over a child, for protection',
+        find: 'أعيذكما بكلمات الله التامة', to: 'لامة',
+        tr: 'Uʿidhukuma bi-kalimatillahit-tammati min kulli shaytanin wa hammatin wa min kulli ʿaynin lammah.',
+        en: 'I place you both in the protection of the perfect words of Allah, from every devil and every creeping thing, and from every envious eye.',
+        note: 'He ﷺ used to say it over al-Hasan and al-Husayn.'
+      },
+      {
+        title: 'Seeing someone afflicted',
+        find: 'الحمد لله الذي عافاني مما ابتلاك به', to: 'تفضيلا',
+        tr: 'Al-hamdu lillahilladhi ʿafani mimmabtalaka bihi wa faddalani ʿala kathirin mimman khalaqa tafdila.',
+        en: 'All praise is for Allah who kept me safe from what He tested you with, and favoured me over much of what He created.',
+        note: 'Said quietly, so the one who is afflicted does not hear it.'
+      },
+      {
+        title: 'Entering a market',
+        find: 'لا إله إلا الله وحده لا شريك له', to: 'وهو على كل شيء قدير',
+        context: ['يحيي ويميت', 'السوق'],
+        tr: 'La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamd, yuhyi wa yumit, wa huwa hayyun la yamut, biyadihil-khayr, wa huwa ʿala kulli shay’in qadir.',
+        en: 'There is no god but Allah alone, with no partner. His is the dominion and His the praise. He gives life and causes death, and He is living and does not die. In His hand is all good, and He is capable of all things.'
+      },
+      {
+        title: 'For a heart that keeps to the truth',
+        find: 'يا مقلب القلوب ثبت قلبي على دينك',
+        tr: 'Ya muqallibal-qulub, thabbit qalbi ʿala dinik.',
+        en: 'O Turner of hearts, make my heart firm upon Your religion.',
+        note: 'He ﷺ swore by it often, and when asked why, said that hearts are between two of the fingers of the Most Merciful.'
+      }
+    ]
+  },
+
+  {
+    slug: 'tahajjud',
+    title: 'Tahajjud',
+    blurb: 'Rising for the night prayer',
+    icon: 'moon',
+    items: [
+      {
+        title: 'On waking for the night prayer',
+        find: 'اللهم لك الحمد أنت نور السموات والأرض', to: 'أنت الحق',
+        tr: 'Allahumma lakal-hamd, anta nurus-samawati wal-ardi wa man fihinn…',
+        en: 'O Allah, to You belongs all praise. You are the light of the heavens and the earth and all within them. To You belongs all praise, You are the sustainer of the heavens and the earth and all within them… You are the Truth.',
+        note: 'What he ﷺ said when he rose in the night to pray.'
+      },
+      {
+        title: 'Opening the night prayer',
+        find: 'اللهم رب جبرائيل وميكائيل', to: 'تهدي من تشاء',
+        tr: 'Allahumma Rabba Jibra’ila wa Mika’ila wa Israfil, fatiras-samawati wal-ard, ʿalimal-ghaybi wash-shahadah, anta tahkumu bayna ʿibadika fima kanu fihi yakhtalifun. Ihdini limakhtulifa fihi minal-haqqi bi-idhnik, innaka tahdi man tasha’…',
+        en: 'O Allah, Lord of Jibril, Mika’il and Israfil, Originator of the heavens and the earth, Knower of the unseen and the seen: You judge between Your servants in what they differ over. Guide me by Your leave to the truth in what is differed over. Indeed You guide whom You will…',
+        note: 'What he ﷺ opened the night prayer with.'
+      },
+      {
+        title: 'Light in the heart',
+        find: 'اللهم اجعل في قلبي نورا',
+        tr: 'Allahummajʿal fi qalbi nura.',
+        en: 'O Allah, place light in my heart.',
+        note: 'The opening of a longer supplication he ﷺ made on rising in the night.'
+      }
+    ]
+  },
+
+  {
+    slug: 'tawba',
+    title: 'Repentance',
+    blurb: 'Turning back, and asking to be forgiven',
+    icon: 'heart',
+    items: [
+      {
+        title: 'Asking to be turned back',
+        find: 'رب اغفر لي وتب علي', to: 'التواب الرحيم',
+        count: 100,
+        tr: 'Rabbighfir li wa tub ʿalayya, innaka antat-Tawwabur-Rahim.',
+        en: 'My Lord, forgive me and turn to me in mercy. Indeed You are the Ever-Returning, the Merciful.',
+        benefits: 'Ibn ʿUmar said they would count him ﷺ saying this a hundred times in one sitting.'
+      },
+      {
+        title: 'The words of Adam ﷺ',
+        quran: [7, 23], clip: 'ربنا ظلمنا أنفسنا',
+        tr: 'Rabbana zalamna anfusana wa in lam taghfir lana wa tarhamna lanakunanna minal-khasirin.',
+        en: 'Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.'
+      },
+      {
+        title: 'The call from the darknesses',
+        quran: [21, 87], clip: 'لا إله إلا أنت',
+        tr: 'La ilaha illa anta subhanaka inni kuntu minaz-zalimin.',
+        en: 'There is no god but You. Glory be to You. Indeed I was among the wrongdoers.',
+        note: 'The words of Yunus ﷺ from inside the whale.'
       }
     ]
   }

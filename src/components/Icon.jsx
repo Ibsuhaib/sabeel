@@ -63,6 +63,9 @@ const LOCAL = {
 
 const ILLUSTRATED = new Set(ILLUS.names)
 
+// Under 18px there is no room for shading to read as shading.
+const ILLUSTRATED_MIN = 18
+
 export default function Icon({ name, size = 20, className = '', style }) {
   const chosen = style || useIconStyle()
 
@@ -71,7 +74,12 @@ export default function Icon({ name, size = 20, className = '', style }) {
   // because a 3D render at 14px inside a line of text is mud. Anything it does
   // not cover falls through to the vector set, which is the right shape for a
   // small functional icon anyway.
-  if (chosen === 'illustrated' && ILLUSTRATED.has(name)) {
+  //
+  // That was enforced by which names the set covers, which is the wrong test: it
+  // covers `book`, and `book` is also the little mark beside a hadith reference
+  // at twelve pixels, where the render came out as a coloured smudge. The size is
+  // the test. Below this, the flat glyph, whatever set is chosen.
+  if (chosen === 'illustrated' && size >= ILLUSTRATED_MIN && ILLUSTRATED.has(name)) {
     return (
       <img
         src={`icons3d/${name}.png`}
