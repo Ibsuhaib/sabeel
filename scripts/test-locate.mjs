@@ -98,6 +98,40 @@ if (!/const native = await nativePosition/.test(src)) {
   fail('locate() does not ask Android first, so the APK is still on WebView geolocation')
 }
 
+// It must be a fallback and not a replacement. The first version rethrew
+// whatever the native side said, so one failure there took the WebView path away
+// as well — and that path had been working. That regression is the one that
+// mattered, so it is checked directly.
+if (!src.includes('nativeFailure = e')) {
+  fail('a native failure is not stepped over, so it can still take the WebView path down with it')
+}
+if (!src.includes('let nativeFailure = null')) {
+  fail('locate() does not remember the native failure to report later')
+}
+if (!failed) log('  a native failure falls through to the WebView instead of ending the attempt')
+
+// The Android side must accept Approximate. Capacitor treats an alias holding
+// several permissions as all-or-nothing — its own comment says so — and from
+// Android 12 the dialog grants coarse while refusing fine, which then read as a
+// refusal of a request the user had actually allowed.
+const plugin = path.join(ROOT, 'android/app/src/main/java/app/sabeel/quran/LocationPlugin.java')
+if (fs.existsSync(plugin)) {
+  // Comments stripped first. The plugin explains in prose why it does *not* use
+  // getPermissionState, and scanning the raw text found that sentence and called
+  // it the bug — the same way check-imports.mjs once matched "Icon.jsx" inside a
+  // comment and reported a missing import.
+  const java = fs.readFileSync(plugin, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  if (java.includes('getPermissionState("location")')) {
+    fail('the plugin checks permission through the alias, which fails when only Approximate was granted')
+  }
+  if (!java.includes('ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED')) {
+    fail('the plugin does not accept coarse location on its own')
+  }
+  if (!failed) log('  approximate location counts as granted, which is what Android 12 hands back')
+}
+
 /* --------------------------------- done ---------------------------------- */
 
 log('Sabeel \u00b7 Location errors')

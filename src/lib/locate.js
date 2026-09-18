@@ -52,6 +52,17 @@ function fix({ highAccuracy, timeout }) {
 // be had, it is the device switch and not the app. This matters because the
 // message for both used to be "Location is unavailable right now. Pick a city
 // instead", which tells someone to give up when the fix is one toggle away.
+// Which of two failures to tell someone about.
+//
+// Android saying the switch is off is a fact; the web API's timeout is only the
+// symptom of it. Where the native side knew something definite, that is the one
+// worth showing.
+function worseOf(nativeErr, webErr) {
+  if (!nativeErr) return webErr
+  if (nativeErr.code === 'servicesOff' || nativeErr.code === 'denied') return nativeErr
+  return webErr
+}
+
 async function explain(e) {
   let code = e.code
   const native = await isNative().catch(() => false)
@@ -74,22 +85,29 @@ async function explain(e) {
  * @throws {Error} with `.code`: 'unsupported' | 'denied' | 'servicesOff' | 'unavailable' | 'timeout'
  */
 export async function locate({ highAccuracy = true, timeout = 15000 } = {}) {
-  // Inside the APK, ask Android rather than the WebView.
+  // Inside the APK, ask Android before asking the WebView.
   //
-  // The WebView's geolocation reported a granted permission and then produced no
-  // fix — which is a known weakness of it, and gives nothing to diagnose with,
-  // because the web API cannot even say whether the device's Location switch is
-  // on. Android's own LocationManager can, asks every provider at once instead of
-  // waiting on satellites, and will take a recent fix immediately.
+  // The WebView's geolocation reports a granted permission and then produces no
+  // fix, and gives nothing to diagnose with either, because the web API cannot
+  // say whether the device's Location switch is even on. Android's own
+  // LocationManager can, asks every provider at once instead of waiting on
+  // satellites, and will take a recent fix immediately.
+  //
+  // It is a *fallback*, not a replacement. The first version of this rethrew
+  // whatever the native side said, so one failure there took away the WebView
+  // path as well — and that path had been working. An extra way to get a
+  // position must never be able to remove the one that was already there, so
+  // anything it does is remembered and then stepped over.
+  let nativeFailure = null
   try {
     const native = await nativePosition({ timeout })
     if (native) return native
   } catch (e) {
-    throw await explain(e)
+    nativeFailure = e
   }
 
   if (!navigator.geolocation) {
-    throw Object.assign(new Error(MESSAGE.unsupported), { code: 'unsupported' })
+    throw await explain(nativeFailure || Object.assign(new Error(MESSAGE.unsupported), { code: 'unsupported' }))
   }
 
   try {
@@ -104,10 +122,10 @@ export async function locate({ highAccuracy = true, timeout = 15000 } = {}) {
       try {
         return await fix({ highAccuracy: false, timeout: Math.max(timeout, 20000) })
       } catch (second) {
-        throw await explain(second)
+        throw await explain(worseOf(nativeFailure, second))
       }
     }
-    throw await explain(e)
+    throw await explain(worseOf(nativeFailure, e))
   }
 }
 

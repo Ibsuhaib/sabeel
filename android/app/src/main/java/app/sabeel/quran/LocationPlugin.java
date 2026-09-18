@@ -3,6 +3,7 @@ package app.sabeel.quran;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -19,6 +20,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 
@@ -47,7 +50,10 @@ import java.util.List;
     permissions = {
         @Permission(
             alias = "location",
-            strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }
+            // Both are requested so the dialog offers the Precise/Approximate
+            // choice. Which one comes back is checked with hasLocationPermission
+            // rather than through this alias, for the reason documented there.
+            strings = { Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION }
         )
     }
 )
@@ -77,9 +83,28 @@ public class LocationPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Whether we may ask for a position at all.
+     *
+     * Deliberately not getPermissionState("location"). Capacitor evaluates an
+     * alias holding several permissions as all-or-nothing — its own comment in
+     * Bridge.getPermissionStates says "multiple permissions with the same alias
+     * must all be true, otherwise all false" — and from Android 12 the system
+     * dialog offers Approximate, which grants COARSE and denies FINE.
+     *
+     * Someone who chose Approximate had therefore granted location and been told
+     * they had refused it. Coarse is entirely good enough here: prayer times and
+     * the qibla move by nothing across the couple of kilometres it is accurate
+     * to, and it is the setting a cautious person is most likely to pick.
+     */
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     @PluginMethod
     public void getPosition(PluginCall call) {
-        if (getPermissionState("location") != com.getcapacitor.PermissionState.GRANTED) {
+        if (!hasLocationPermission()) {
             requestPermissionForAlias("location", call, "permissionCallback");
             return;
         }
@@ -88,7 +113,7 @@ public class LocationPlugin extends Plugin {
 
     @PermissionCallback
     private void permissionCallback(PluginCall call) {
-        if (getPermissionState("location") != com.getcapacitor.PermissionState.GRANTED) {
+        if (!hasLocationPermission()) {
             call.reject("Location permission was refused.", "denied");
             return;
         }
