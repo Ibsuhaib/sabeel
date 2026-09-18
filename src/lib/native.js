@@ -41,6 +41,64 @@ async function notifications() {
   } catch { return null }
 }
 
+// The app's own location plugin, registered in MainActivity. See
+// android/app/src/main/java/app/sabeel/quran/LocationPlugin.java for why this
+// does not use Capacitor's Geolocation plugin.
+let locationPlugin = null
+async function sabeelLocation() {
+  if (locationPlugin !== null) return locationPlugin
+  if (!(await core())) { locationPlugin = false; return false }
+  try {
+    const { registerPlugin } = await import('@capacitor/core')
+    locationPlugin = registerPlugin('SabeelLocation')
+  } catch {
+    locationPlugin = false
+  }
+  return locationPlugin
+}
+
+/** Is the device's Location switch on? Null when we cannot tell (the web). */
+export async function locationServicesEnabled() {
+  const p = await sabeelLocation()
+  if (!p) return null
+  try { return Boolean((await p.isEnabled()).enabled) } catch { return null }
+}
+
+/** Open Android's location settings. False when there is nothing to open. */
+export async function openLocationSettings() {
+  const p = await sabeelLocation()
+  if (!p) return false
+  try { await p.openSettings(); return true } catch { return false }
+}
+
+/**
+ * A fix from Android itself rather than from the WebView.
+ * @returns a position, or null when this is not the app, so the caller falls
+ *          back to navigator.geolocation.
+ * @throws  an Error with `.code` of 'denied' | 'servicesOff' | 'timeout' |
+ *          'unavailable' | 'unsupported'
+ */
+export async function nativePosition({ timeout = 15000, maximumAge = 300000 } = {}) {
+  const p = await sabeelLocation()
+  if (!p) return null
+  try {
+    const r = await p.getPosition({ timeout, maximumAge })
+    return {
+      lat: r.latitude,
+      lng: r.longitude,
+      accuracy: r.accuracy ?? null,
+      label: 'Current location',
+      source: 'gps'
+    }
+  } catch (e) {
+    // Capacitor puts the reject code on `.code`; older bridges only carry the
+    // message, so an unrecognised failure is reported as merely unavailable
+    // rather than as a refusal the user never made.
+    const code = e?.code && typeof e.code === 'string' ? e.code : 'unavailable'
+    throw Object.assign(new Error(e?.message || 'Location is unavailable.'), { code })
+  }
+}
+
 export async function requestNativePermission() {
   const LN = await notifications()
   if (!LN) return 'unsupported'

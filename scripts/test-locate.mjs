@@ -78,9 +78,25 @@ is(calls.length, 2, 'exactly two attempts')
 // phone wording is checked against the source, since that is what people read.
 const src = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'locate.js'), 'utf8')
 const phone = /servicesOff: '([^']+)'/.exec(src)?.[1] || ''
-if (!/Location tile/i.test(phone)) fail('the phone message does not say where to turn Location on')
 if (/pick a city/i.test(phone)) fail('the phone message still tells people to give up and pick a city')
-if (!failed) log(`  the phone is told exactly where to look: "${phone.slice(0, 58)}…"`)
+if (!/switched off/i.test(phone)) fail('the phone message does not say the switch is off')
+
+// Telling someone where the tile lives was the first attempt, and a poor one —
+// every manufacturer puts it somewhere different. The app opens the page itself
+// now, so the message states the fact and the button does the work.
+const err = fs.readFileSync(path.join(ROOT, 'src', 'components', 'LocationError.jsx'), 'utf8')
+if (!err.includes('openLocationSettings')) fail('there is no way to open the location settings')
+if (!err.includes('visibilitychange')) {
+  fail('coming back from settings does not retry, so the error stays on screen after being fixed')
+}
+if (!/native === true/.test(err)) fail('the settings button is not held back from the web, where it does nothing')
+if (!failed) log(`  the switch being off offers a button to the settings page, and retries on return`)
+
+// And the native path has to be tried before the WebView's, which is the whole
+// point — the WebView reported a grant and then produced no fix.
+if (!/const native = await nativePosition/.test(src)) {
+  fail('locate() does not ask Android first, so the APK is still on WebView geolocation')
+}
 
 /* --------------------------------- done ---------------------------------- */
 
