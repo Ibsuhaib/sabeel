@@ -177,7 +177,12 @@ export default function Notifications() {
                 checked={!!n.enabled}
                 onChange={v => { patch({ enabled: v }); if (v) prime() }}
                 label="Prayer notifications"
-                hint={n.enabled ? 'On — armed for the next 24 hours' : 'Off'}
+                // Says what is actually armed. On Android that is a week of
+                // alarms held by the OS; in a browser it is the day the page
+                // can cover on its own.
+                hint={!n.enabled ? 'Off'
+                  : status?.days ? `On — ${status.osArmed ?? status.armed} prayers armed for the next ${status.days} days`
+                  : 'On — armed for the next 24 hours'}
               />
             </Card>
           </div>
@@ -361,9 +366,14 @@ export default function Notifications() {
         </>
       )}
 
+      {/* The second sentence is the part that differs: inside the APK it is
+          Android's alarm manager holding the schedule, not the browser, and
+          saying otherwise made the app look like it was running in a tab. */}
       <p className="text-[11px] text-muted/70 text-center px-8 mt-8 leading-relaxed">
         No push server, no account, no data leaving your phone. Sabeel works your prayer times out
-        on this device and asks the browser to remind you.
+        on this device and {reliability.level === 'best'
+          ? 'hands them to Android to call you, even with no signal.'
+          : 'asks the browser to remind you.'}
       </p>
     </Screen>
   )

@@ -138,14 +138,22 @@ export async function ensureChannels(settings = {}) {
   return true
 }
 
-// Android caps how many alarms an app may hold; a day of prayers plus reminders
-// is around ten, which is comfortably inside every limit.
+// Android identifies an alarm by an integer, and scheduling the same integer
+// twice replaces the first — which is what makes re-arming safe to do as often
+// as we like.
+//
+// This used to hash the item's string id into 100,000 buckets. Over a single day
+// that was fine. Over a week of prayers and reminders it is around eighty
+// alarms, and the chance that two of them collide is a few percent — a collision
+// meaning one prayer quietly overwrites another and never sounds. So the id is
+// derived rather than hashed: the day, the prayer, and whether it is the call or
+// the reminder before it. Two different prayers cannot produce the same number.
+const SLOT = { fajr: 0, sunrise: 1, dhuhr: 2, asr: 3, maghrib: 4, isha: 5 }
+
 const idFor = (item) => {
-  // Stable small integer from the item id, so re-scheduling replaces rather
-  // than duplicates.
-  let h = 0
-  for (let i = 0; i < item.id.length; i++) h = (h * 31 + item.id.charCodeAt(i)) % 100000
-  return h + 1
+  const day = Math.floor(item.at.getTime() / 86400000) % 20000   // days since 1970, wraps in 54 years
+  const slot = (SLOT[item.prayer] ?? 6) * 2 + (item.kind === 'reminder' ? 1 : 0)
+  return day * 100 + slot + 1                                    // at most 2,000,014 — an int, as Android requires
 }
 
 export async function scheduleNative(items, settings) {
@@ -171,7 +179,9 @@ export async function scheduleNative(items, settings) {
     return res ? adhanChannel(res, isFajr ? 'fajr' : 'std') : CHANNELS.beep
   }
 
-  const payload = items.slice(0, 60).map(item => ({
+  // A week of five prayers, sunrise and a reminder each is about eighty. The cap
+  // is here so a strange setting cannot ask Android for hundreds of alarms.
+  const payload = items.slice(0, 128).map(item => ({
     id: idFor(item),
     title: item.kind === 'reminder' ? `${item.label} soon` : `${item.label}`,
     body: item.kind === 'reminder'

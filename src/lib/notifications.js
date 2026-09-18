@@ -22,7 +22,16 @@ import { dateKey, fmtTime } from './format.js'
 import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission } from './native.js'
 
 const FIRED_KEY = 'sabeel.notified.v1'
+// How far ahead to work out prayer times.
+//
+// In the browser the page holds its own timers, so nothing survives the tab
+// closing and a day is as far as it is worth looking. On Android the alarms
+// belong to the operating system: it holds them through Doze, through the app
+// being killed, and through a reboot. Arming only a day there meant the adhan
+// stopped the moment someone went a day without opening Sabeel — which is
+// exactly the person who needs to be called to prayer.
 const HORIZON_HOURS = 24
+const NATIVE_HORIZON_HOURS = 24 * 7
 
 let timers = []
 let installedFor = null
@@ -86,14 +95,17 @@ const alreadyFired = id => Object.prototype.hasOwnProperty.call(ledger(), id)
 
 /* ------------------------------- schedule -------------------------------- */
 
-// Every prayer in the next 24 hours that the user has switched on, plus its
+// Every prayer inside the horizon that the user has switched on, plus its
 // optional "it starts soon" reminder.
-export function upcoming(settings, from = new Date()) {
+export function upcoming(settings, from = new Date(), hours = HORIZON_HOURS) {
   const n = settings.notifications || {}
   if (!settings.location) return []
 
   const out = []
-  for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+  // One day past the horizon, because a prayer that falls inside the window can
+  // belong to the day after the last whole one it covers.
+  const days = Math.ceil(hours / 24) + 1
+  for (let dayOffset = 0; dayOffset < days; dayOffset++) {
     const day = new Date(from.getTime() + dayOffset * 86400000)
     const t = timesFor(settings, day)
     if (!t) continue
@@ -110,14 +122,14 @@ export function upcoming(settings, from = new Date()) {
       const at = t[p.id]
       if (!(at instanceof Date) || Number.isNaN(at.getTime())) continue
 
-      if (at > from && at - from < HORIZON_HOURS * 3600000) {
+      if (at > from && at - from < hours * 3600000) {
         out.push({ id: `${key}:${p.id}`, prayer: p.id, label: p.label, at, kind: 'adhan', sound })
       }
 
       const mins = Number(n.reminderMinutes) || 0
       if (mins > 0) {
         const early = new Date(at.getTime() - mins * 60000)
-        if (early > from && early - from < HORIZON_HOURS * 3600000) {
+        if (early > from && early - from < hours * 3600000) {
           out.push({ id: `${key}:${p.id}:pre`, prayer: p.id, label: p.label, at: early, kind: 'reminder', minutes: mins, sound })
         }
       }
@@ -211,15 +223,16 @@ export async function schedule(settings, { onFire } = {}) {
   const perm = await effectivePermission()
   if (!n.enabled || perm !== 'granted' || !settings.location) return { armed: 0, mode: 'off' }
 
-  const items = upcoming(settings)
+  const native = await isNative()
+  const items = upcoming(settings, new Date(), native ? NATIVE_HORIZON_HOURS : HORIZON_HOURS)
   installedFor = `${settings.location.lat},${settings.location.lng},${settings.method},${settings.madhab}`
 
   // On Android the alarm manager does this properly: it fires in Doze, plays the
   // adhan as the notification sound and stays in the shade until tapped. Nothing
   // in the browser matches that, so when it is available it is what we use.
-  if (await isNative()) {
+  if (native) {
     const r = await scheduleNative(items, settings)
-    return { armed: items.length, inPage: 0, osArmed: r.scheduled, mode: 'native' }
+    return { armed: items.length, inPage: 0, osArmed: r.scheduled, mode: 'native', days: Math.round(NATIVE_HORIZON_HOURS / 24) }
   }
 
   let osArmed = 0
