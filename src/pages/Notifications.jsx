@@ -13,6 +13,7 @@ import AdhanPicker from '../components/AdhanPicker.jsx'
 import { Screen, Header, Card, Section, Toggle, Choice, Button, Empty } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import PrayerSound, { MODES } from '../components/PrayerSound.jsx'
+import { useIsNative } from '../lib/useNative.js'
 
 const SOUNDS = [
   { id: 'adhan', label: 'Adhan', note: 'The full call to prayer' },
@@ -42,6 +43,7 @@ export default function Notifications() {
   // rather than flashing an error it may be about to retract.
   const [canNotify, setCanNotify] = useState(null)
   const [status, setStatus] = useState(null)
+  const native = useIsNative()
   const [msg, setMsg] = useState(null)
 
   const { data: adhans } = useData(adhanCatalogue, [], { label: 'the adhan list' })
@@ -77,7 +79,11 @@ export default function Notifications() {
       patch({ enabled: true })
       setMsg({ tone: 'ok', text: 'Notifications are on. Send a test below to be sure they actually arrive on this phone.' })
     } else if (result === 'denied') {
-      setMsg({ tone: 'warn', text: 'Your browser is blocking notifications for this site. Allow them in the site settings — the padlock icon in the address bar — then come back.' })
+      // Where to go differs entirely: an address-bar padlock does not exist on a
+      // phone, and Android's own settings are not where a browser keeps this.
+      setMsg({ tone: 'warn', text: native
+        ? 'Android is blocking notifications for Sabeel. Turn them on in Settings → Apps → Sabeel → Notifications, then come back.'
+        : 'Your browser is blocking notifications for this site. Allow them in the site settings — the padlock icon in the address bar — then come back.' })
     }
   }
 
@@ -91,13 +97,15 @@ export default function Notifications() {
     if (mode === 'beep') { playBeep(); return }
     const file = adhans?.adhans?.[0]?.file
     const el = await playAdhan({ adhanFile: file, useCustom: n.useCustomAdhan, volume: n.volume ?? 1 })
-    if (!el) setMsg({ tone: 'warn', text: 'The browser blocked audio. Tap anywhere on the page first, then try again.' })
+    if (!el) setMsg({ tone: 'warn', text: 'Sound needs a tap before it can start. Tap anywhere, then try again.' })
   }
 
   async function test() {
     const r = await sendTest(settings)
     setMsg(r.ok
-      ? { tone: 'ok', text: `Sent via the ${r.via}. If nothing appeared, your phone is suppressing it — see the note below.` }
+      ? { tone: 'ok', text: r.delayed
+          ? 'Sent — it should appear in a moment. If nothing arrives, your phone is suppressing it: see the note below.'
+          : 'Sent. If nothing appeared, your phone is suppressing it — see the note below.' }
       : { tone: 'warn', text: r.reason })
     if (r.ok) preview()
   }

@@ -19,7 +19,7 @@
 import { timesFor, PRAYERS, FARD } from './prayer.js'
 import { prayerSound } from './settings.jsx'
 import { dateKey, fmtTime } from './format.js'
-import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission } from './native.js'
+import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission, testNative } from './native.js'
 
 const FIRED_KEY = 'sabeel.notified.v1'
 // How far ahead to work out prayer times.
@@ -297,6 +297,11 @@ export async function catchUp(settings, { windowMinutes = 30, onFire } = {}) {
 // design notes calls for exactly this, because OEM battery managers silently
 // break background alarms and users blame the app.
 export async function sendTest(settings) {
+  // Inside the APK there is no web Notification API to use, and permission()
+  // answers for one that is not there. Android's own path is both the one that
+  // works and the one a prayer will actually arrive by.
+  if (await isNative()) return testNative(settings)
+
   if (permission() !== 'granted') return { ok: false, reason: 'Notifications are not allowed yet.' }
   const reg = await registration()
   const options = {

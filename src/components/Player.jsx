@@ -5,6 +5,7 @@ import { quranMeta } from '../lib/data.js'
 import { useSettings } from '../lib/settings.jsx'
 import { Sheet, Choice, Toggle, Button } from './ui.jsx'
 import Icon from './Icon.jsx'
+import ReciterPreview, { stopPreview } from './ReciterPreview.jsx'
 
 // The persistent transport. Mounted once at the app level, not per page, so
 // recitation keeps playing and stays controllable while you look something up —
@@ -328,6 +329,9 @@ function NumberField({ label, value, min, max, onChange }) {
 
 export function ReciterList({ catalogue, currentId, onSelect }) {
   const [q, setQ] = useState('')
+  // Choosing a reciter starts the real player; a sample still going underneath
+  // it would be two recitations at once.
+  useEffect(() => () => stopPreview(), [])
   if (!catalogue) return <p className="p-6 text-center text-sm text-muted">Loading reciters…</p>
 
   const groups = groupReciters(catalogue)
@@ -351,28 +355,33 @@ export function ReciterList({ catalogue, currentId, onSelect }) {
           <h4 className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted">{g.label}</h4>
           <div className="px-4 space-y-2">
             {g.reciters.map(r => (
-              <button
-                key={r.id} onClick={() => onSelect(r.id)}
-                className={`tap w-full text-left px-3 py-2.5 rounded-xl border ${
-                  currentId === r.id ? 'border-brand bg-brand/10' : 'border-line bg-bg'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm truncate">{r.name}</span>
-                    <span className="block text-[11px] text-muted truncate">
-                      {r.style}{r.note ? ` · ${r.note}` : ''}
+              // Beside the row, not inside it: a button cannot contain a button,
+              // and hearing someone must not be the same gesture as choosing them.
+              <div key={r.id} className="flex items-center gap-2">
+                <button
+                  onClick={() => { stopPreview(); onSelect(r.id) }}
+                  className={`tap flex-1 min-w-0 text-left px-3 py-2.5 rounded-xl border ${
+                    currentId === r.id ? 'border-brand bg-brand/10' : 'border-line bg-bg'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm truncate">{r.name}</span>
+                      <span className="block text-[11px] text-muted truncate">
+                        {r.style}{r.note ? ` · ${r.note}` : ''}
+                      </span>
+                    </span>
+                    <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border ${
+                      r.mode === 'ayah'
+                        ? 'border-brand/40 text-brand'
+                        : 'border-line text-muted'
+                    }`}>
+                      {r.mode === 'ayah' ? 'ayah control' : 'full surah'}
                     </span>
                   </span>
-                  <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border ${
-                    r.mode === 'ayah'
-                      ? 'border-brand/40 text-brand'
-                      : 'border-line text-muted'
-                  }`}>
-                    {r.mode === 'ayah' ? 'ayah control' : 'full surah'}
-                  </span>
-                </span>
-              </button>
+                </button>
+                <ReciterPreview reciter={r} />
+              </div>
             ))}
           </div>
         </section>

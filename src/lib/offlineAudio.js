@@ -58,7 +58,7 @@ const CONCURRENCY = 6
 
 export async function download(urls, { onProgress, signal } = {}) {
   const c = await bucket()
-  if (!c) throw new Error('This browser cannot store audio offline.')
+  if (!c) throw new Error('This device cannot store audio offline.')
 
   const keys = new Set((await c.keys()).map(r => r.url))
   const todo = urls.filter(u => !keys.has(new Request(u).url))

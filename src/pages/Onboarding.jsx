@@ -5,6 +5,7 @@ import { METHODS } from '../lib/prayer.js'
 import { loadReciters, groupReciters } from '../lib/reciters.js'
 import { Button, Choice } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import ReciterPreview, { stopPreview } from '../components/ReciterPreview.jsx'
 
 // Four taps: location → madhab → translation → reciter. No account, no email,
 // no permission wall. Every step is skippable and changeable later.
@@ -16,7 +17,11 @@ export default function Onboarding() {
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState(null)
 
-  const next = () => (step < STEPS.length - 1 ? setStep(step + 1) : set({ onboarded: true }))
+  // A sample still playing when onboarding ends would carry on over the app.
+  const next = () => {
+    stopPreview()
+    return step < STEPS.length - 1 ? setStep(step + 1) : set({ onboarded: true })
+  }
 
   function useMyLocation() {
     setLocating(true)
@@ -102,7 +107,7 @@ export default function Onboarding() {
         )}
 
         {s === 'reciter' && (
-          <Step title="Choose a reciter" body="Recitation streams on demand and is cached as you listen, so surahs you have played work offline. You can change this any time.">
+          <Step title="Choose a reciter" body="Tap ▶ beside a name to hear them recite al-Fātiḥah — a name tells you little, the voice tells you everything. Recitation streams on demand and is cached as you listen. You can change this any time.">
             <ReciterStep value={settings.reciter} onChange={id => set({ reciter: id })} />
           </Step>
         )}
@@ -136,18 +141,23 @@ function ReciterStep({ value, onChange }) {
           <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2">{g.label}</h4>
           <div className="space-y-2">
             {g.reciters.slice(0, g.id === 'other' ? 10 : 99).map(r => (
-              <button
-                key={r.id}
-                onClick={() => onChange(r.id)}
-                className={`tap w-full text-left px-3 py-2.5 rounded-xl border text-sm flex items-center gap-2 ${
-                  value === r.id ? 'border-brand bg-brand/10' : 'border-line bg-surf text-muted'
-                }`}
-              >
-                <span className="flex-1 min-w-0 truncate">{r.name}</span>
-                {r.mode === 'surah' && (
-                  <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border border-line opacity-70">full surah</span>
-                )}
-              </button>
+              // The listen button sits beside the row rather than inside it:
+              // a button within a button is not valid, and tapping to hear
+              // someone must not also choose them.
+              <div key={r.id} className="flex items-center gap-2">
+                <button
+                  onClick={() => onChange(r.id)}
+                  className={`tap flex-1 min-w-0 text-left px-3 py-2.5 rounded-xl border text-sm flex items-center gap-2 ${
+                    value === r.id ? 'border-brand bg-brand/10' : 'border-line bg-surf text-muted'
+                  }`}
+                >
+                  <span className="flex-1 min-w-0 truncate">{r.name}</span>
+                  {r.mode === 'surah' && (
+                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md border border-line opacity-70">full surah</span>
+                  )}
+                </button>
+                <ReciterPreview reciter={r} />
+              </div>
             ))}
           </div>
         </section>

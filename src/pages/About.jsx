@@ -1,5 +1,6 @@
 import { Screen, Header, Card, Section } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
+import { useIsNative } from '../lib/useNative.js'
 
 const PRINCIPLES = [
   'No ads, ever. No tracking, no analytics, no data sold.',
@@ -25,6 +26,7 @@ const SOURCES = [
 ]
 
 export default function About() {
+  const native = useIsNative()
   return (
     <Screen>
       <Header title="About Sabeel" back />
@@ -144,13 +146,15 @@ export default function About() {
             Quran recorded by an imam of al-Aqsa exists in the open recitation archives. Rather than
             label someone else as an Aqsa reciter, that space is left empty.
           </p>
+          {/* Listed among the things not yet built, which it is on the web —
+              and is not in the installed app, where Android holds the alarms.
+              Saying otherwise there confesses to a limitation the app does not
+              have. */}
           <p className="text-[13px] text-muted leading-relaxed mt-3">
-            <strong className="text-ink">Notifications with the app fully closed</strong> depend on
-            the browser. Where it supports scheduled notifications, prayer times are handed to the
-            operating system and arrive without Sabeel running. Where it does not, they are reliable
-            while Sabeel is open or in the background, and anything missed is shown when you next
-            open it. Guaranteeing more would need a push server — a backend, and your prayer times
-            leaving your phone.
+            <strong className="text-ink">Notifications with the app fully closed</strong>{' '}
+            {native
+              ? 'work here: Android holds a week of prayer times in its own alarm manager, so they arrive on time with Sabeel closed, the phone offline, and the screen asleep. On the web they depend on the browser, which is why this app exists as well as a website.'
+              : 'depend on the browser. Where it supports scheduled notifications, prayer times are handed to the operating system and arrive without Sabeel running. Where it does not, they are reliable while Sabeel is open or in the background, and anything missed is shown when you next open it. Guaranteeing more would need a push server — a backend, and your prayer times leaving your phone.'}
           </p>
         </Card>
       </Section>

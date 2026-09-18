@@ -24,7 +24,7 @@ export default function AdhanPicker({
     const file = isCustom ? null : adhans?.find(a => a.id === id)?.file
     const el = await playAdhan({ adhanFile: file, useCustom: isCustom, slot, volume: 1 })
     if (!el) {
-      onMessage?.({ tone: 'warn', text: 'The browser blocked audio. Tap the page once, then try again.' })
+      onMessage?.({ tone: 'warn', text: 'Sound needs a tap before it can start. Tap anywhere, then try again.' })
       return
     }
     setPlaying(id)

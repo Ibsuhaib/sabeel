@@ -207,6 +207,55 @@ export async function scheduleNative(items, settings) {
   }
 }
 
+// The "does this actually work on my phone" button.
+//
+// It used to go through the web Notification API for everyone, which inside the
+// APK means an API the WebView does not provide — so the one button whose whole
+// purpose is to prove notifications work reported that they were not allowed,
+// on a phone where they were already scheduled and working.
+//
+// Scheduled a moment out rather than shown immediately, so it arrives through
+// the same alarm path a prayer does and demonstrates that path rather than a
+// different one.
+export async function testNative(settings = {}) {
+  const LN = await notifications()
+  if (!LN) return { ok: false, reason: 'Notifications are not available on this device.' }
+  await ensureChannels(settings)
+
+  const n = settings.notifications || {}
+  const res = resourceFor(n.adhanId)
+  const mode = allSameMode(settings)
+  const channel = mode === 'adhan' && res ? adhanChannel(res, 'std') : CHANNELS[mode] || CHANNELS.beep
+
+  try {
+    await LN.schedule({
+      notifications: [{
+        id: 2147483000,                        // far above any prayer's id
+        title: 'Sabeel test notification',
+        body: 'If you can see this, notifications work on this device. Prayer times will arrive the same way.',
+        channelId: channel.id,
+        schedule: { at: new Date(Date.now() + 2000), allowWhileIdle: true },
+        autoCancel: false,
+        smallIcon: 'ic_stat_sabeel',
+        iconColor: '#6ABE8F',
+        extra: { kind: 'test', url: '/#/notifications' }
+      }]
+    })
+    return { ok: true, via: 'Android', delayed: true }
+  } catch (e) {
+    return { ok: false, reason: e.message }
+  }
+}
+
+// Which sound a test should make: whatever the prayers are set to, when they
+// agree, and the adhan when they do not — there is no single sound to stand for
+// a mixture.
+function allSameMode(settings) {
+  const per = settings.notifications?.perPrayer || {}
+  const modes = new Set(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map(p => per[p] || 'adhan'))
+  return modes.size === 1 ? [...modes][0] : 'adhan'
+}
+
 export async function cancelNative() {
   const LN = await notifications()
   if (!LN) return false

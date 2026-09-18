@@ -6,6 +6,7 @@ import {
 import { Sheet, Button } from './ui.jsx'
 import Icon from './Icon.jsx'
 import Tooltip from './Tooltip.jsx'
+import { useIsNative } from '../lib/useNative.js'
 
 // The download control that sits in the reader header. Shows, at a glance,
 // whether this surah is on the device for the reciter you are actually using —
@@ -131,8 +132,8 @@ export default function DownloadAudio({ reciter, surah, ayahCount, surahName }) 
             This saves the <span className="text-ink">recitation audio</span> for this surah — the
             Arabic text and translation are already on your device and need no download. Anything
             you listen to is kept automatically; this fetches the whole surah at once so it plays
-            with no signal at all. It is stored by your browser on this device, nothing is
-            uploaded, and it counts against this app's storage rather than your photo roll.
+            with no signal at all. It is stored on this device, nothing is uploaded, and it counts
+            against this app's storage rather than your photo roll.
           </p>
 
           {progress ? (
@@ -169,14 +170,23 @@ export default function DownloadAudio({ reciter, surah, ayahCount, surahName }) 
   )
 }
 
+// Browsers evict cached data when a device runs short of space unless the site
+// has been granted persistent storage, and saying so is fair warning on the web.
+//
+// It is not true in the installed app, and it was being shown there: a WebView
+// answers `persisted()` with false whether or not the data is safe, and Android
+// does not quietly delete an installed app's files to make room. So the note
+// appeared on a phone, said the browser might clear the downloads, and advised
+// installing to the home screen — to someone who had installed the app already.
 function PersistenceNote() {
   const [persisted, setPersisted] = useState(null)
+  const native = useIsNative()
   useEffect(() => { isPersisted().then(setPersisted) }, [])
-  if (persisted !== false) return null
+  if (native !== false || persisted !== false) return null
   return (
     <p className="text-[11px] text-muted/70 mt-4 leading-relaxed">
       <Icon name="info" size={12} className="inline mr-1 -mt-0.5" />
-      Your browser has not marked this storage as permanent, so it may clear downloads if the
+      This browser has not marked the storage as permanent, so it may clear downloads if the
       device runs low on space. Installing Sabeel to your home screen usually fixes that.
     </p>
   )
