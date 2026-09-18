@@ -6,6 +6,7 @@ import { loadReciters, groupReciters } from '../lib/reciters.js'
 import { Button, Choice } from '../components/ui.jsx'
 import Icon from '../components/Icon.jsx'
 import ReciterPreview, { stopPreview } from '../components/ReciterPreview.jsx'
+import LocationError from '../components/LocationError.jsx'
 
 // Four taps: location → madhab → translation → reciter. No account, no email,
 // no permission wall. Every step is skippable and changeable later.
@@ -35,7 +36,7 @@ export default function Onboarding() {
         })
         setStep(1)
       })
-      .catch(e => setLocError(e.message))
+      .catch(e => setLocError(e))
       .finally(() => setLocating(false))
   }
 
@@ -62,11 +63,7 @@ export default function Onboarding() {
               <Icon name="location" size={18} />
               {locating ? 'Getting your location…' : 'Use my location'}
             </Button>
-            {locError && (
-              <p className="text-xs text-amber-500 mt-3 flex gap-2 leading-relaxed">
-                <Icon name="warn" size={14} className="shrink-0 mt-0.5" />{locError}
-              </p>
-            )}
+            <LocationError error={locError} onRetry={useMyLocation} />
             <CityPicker onPick={city => { set({ location: { ...city, source: 'city' }, method: city.method }); setStep(1) }} />
           </Step>
         )}
