@@ -58,7 +58,7 @@ export default function Onboarding() {
               {locating ? 'Getting your location…' : 'Use my location'}
             </Button>
             {locError && (
-              <p className="text-xs text-amber-500 mt-3 flex gap-2">
+              <p className="text-xs text-amber-500 mt-3 flex gap-2 leading-relaxed">
                 <Icon name="warn" size={14} className="shrink-0 mt-0.5" />{locError}
               </p>
             )}

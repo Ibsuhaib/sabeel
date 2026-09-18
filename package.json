@@ -17,7 +17,7 @@
     "data:all": "npm run data:quran && npm run data:layout && npm run data:dua && npm run data:reciters && npm run data:adhan && npm run data:geomag && npm run data:hadith && npm run data:adhkar && npm run data:index && npm run data:fonts && npm run data:icons2 && npm run data:illus && npm run data:icons && npm run data:verify",
     "data:fonts": "node scripts/fetch-fonts.mjs",
     "data:icons": "node scripts/make-icons.mjs",
-    "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs && node scripts/test-swipe.mjs && node scripts/test-notifications.mjs && node scripts/audit-sources.mjs && node scripts/verify-dua-refs.mjs && node scripts/verify-integrity-religious.mjs && node scripts/check-release.mjs && node scripts/check-listing.mjs",
+    "test": "node scripts/check-imports.mjs && node scripts/smoke-test.mjs && node scripts/test-swipe.mjs && node scripts/test-notifications.mjs && node scripts/test-locate.mjs && node scripts/audit-sources.mjs && node scripts/verify-dua-refs.mjs && node scripts/verify-integrity-religious.mjs && node scripts/check-release.mjs && node scripts/check-listing.mjs",
     "data:reciters": "node scripts/fetch-reciters.mjs",
     "data:adhan": "node scripts/fetch-adhan.mjs",
     "check:imports": "node scripts/check-imports.mjs",
@@ -35,6 +35,7 @@
     "check:listing": "node scripts/check-listing.mjs",
     "check:duarefs": "node scripts/verify-dua-refs.mjs",
     "test:notify": "node scripts/test-notifications.mjs",
+    "test:locate": "node scripts/test-locate.mjs",
     "check:religious": "node scripts/verify-integrity-religious.mjs"
   },
   "dependencies": {
