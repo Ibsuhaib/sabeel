@@ -5,6 +5,7 @@ import Player from './components/Player.jsx'
 import { useReciterSync } from './lib/reciters.js'
 import { usePrayerNotifications } from './lib/usePrayerNotifications.js'
 import { applyNativeChrome, wireBackButton } from './lib/native.js'
+import { parentOf } from './lib/up.js'
 import { Loading } from './components/ui.jsx'
 import { useSettings } from './lib/settings.jsx'
 
@@ -112,19 +113,22 @@ export default function App() {
 function useAndroidBack() {
   const nav = useNavigate()
   const location = useLocation()
-  const depth = useRef(0)
   const [hint, setHint] = useState(false)
 
-  // Track how far in we are, so we never pop past the app's first screen.
-  useEffect(() => { depth.current += 1 }, [location.key])
+  // The current path, read at the moment the button is pressed rather than
+  // captured when the listener was registered — the listener outlives any one
+  // screen, and a stale path would send someone up from wherever they started.
+  const here = useRef(location.pathname)
+  useEffect(() => { here.current = location.pathname }, [location.pathname])
 
   useEffect(() => {
     let dispose = () => {}
     let alive = true
     wireBackButton({
-      atRoot: () => window.location.hash === '' || window.location.hash === '#/' ,
-      canGoBack: () => depth.current > 1,
-      goBack: () => { depth.current = Math.max(1, depth.current - 2); nav(-1) },
+      atRoot: () => parentOf(here.current) === null,
+      canGoBack: () => parentOf(here.current) !== null,
+      // Up a level, not back through history. See src/lib/up.js.
+      goBack: () => nav(parentOf(here.current) || '/'),
       toRoot: () => nav('/')
     }).then(off => { if (alive) dispose = off; else off() })
 

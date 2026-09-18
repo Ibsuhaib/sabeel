@@ -25,6 +25,31 @@ const QUICK_LINKS = [
   { n: 112, label: 'Al-Ikhlas' }
 ]
 
+// Everything the app can do, in one list. The first row is what shows; the rest
+// is one tap away rather than behind a menu nobody opens. Ordered by how often
+// it is actually reached, not alphabetically.
+const FEATURES = [
+  { to: '/mushaf/1', icon: 'book', label: 'Muṣḥaf' },
+  { to: '/qibla', icon: 'compass', label: 'Qibla' },
+  { to: '/dua/tasbih', icon: 'counter', label: 'Tasbih' },
+  { to: '/dua/morning-dhikr', icon: 'sunrise', label: 'Adhkar' },
+
+  { to: '/khatm', icon: 'calendar', label: 'Khatm' },
+  { to: '/tracker', icon: 'chart', label: 'Tracker' },
+  { to: '/hadith/lookup', icon: 'hadith', label: 'Lookup' },
+  { to: '/bookmarks', icon: 'bookmark', label: 'Saved' },
+  { to: '/search', icon: 'search', label: 'Search' },
+  { to: '/notifications', icon: 'bell', label: 'Adhan' },
+  { to: '/prayer/timetable', icon: 'calendar', label: 'Timetable' },
+  { to: '/dua/names', icon: 'star', label: '99 Names' },
+  { to: '/calendar', icon: 'calendar', label: 'Calendar' },
+  { to: '/zakat', icon: 'calc', label: 'Zakat' },
+  { to: '/offline-audio', icon: 'download', label: 'Downloads' },
+  { to: '/settings', icon: 'settings', label: 'Settings' },
+  { to: '/about', icon: 'info', label: 'About' }
+]
+const FIRST_ROW = 4
+
 // Which collections to surface, and in what order. The hour decides only what
 // goes first — the rest is a fixed spread so the grid does not rearrange itself
 // under someone who is reaching for the card they saw a moment ago.
@@ -50,6 +75,7 @@ export default function Home() {
   const [log, setLog] = useState(null)
   const [sheet, setSheet] = useState(null)
   const [allCollections, setAllCollections] = useState([])
+  const [allFeatures, setAllFeatures] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -230,6 +256,25 @@ export default function Home() {
         </div>
       </Section>
 
+      <Section title="Quick access">
+        <div className="grid grid-cols-4 gap-2 px-4">
+          {(allFeatures ? FEATURES : FEATURES.slice(0, FIRST_ROW)).map(f => (
+            <Tile key={f.to} to={f.to} icon={f.icon} label={f.label} />
+          ))}
+        </div>
+        <button
+          onClick={() => setAllFeatures(v => !v)}
+          aria-expanded={allFeatures}
+          className="tap mx-4 mt-2 w-[calc(100%-2rem)] py-2.5 rounded-xl border border-line bg-surf text-[12px] text-muted flex items-center justify-center gap-1.5 active:bg-bg"
+        >
+          <Icon
+            name="forward" size={13}
+            className={`transition-transform duration-200 ${allFeatures ? '-rotate-90' : 'rotate-90'}`}
+          />
+          {allFeatures ? 'Show less' : `More (${FEATURES.length - FIRST_ROW})`}
+        </button>
+      </Section>
+
       {/* Duas found by the hour or the feeling rather than by which book they
           are in. The sections are still there under /dua; this is the other way
           in, for someone who does not know that what they want is filed under
@@ -257,18 +302,6 @@ export default function Home() {
         </Section>
       )}
 
-      <Section title="Quick access">
-        <div className="grid grid-cols-4 gap-2 px-4">
-          <Tile to="/mushaf/1" icon="book" label="Muṣḥaf" />
-          <Tile to="/dua/tasbih" icon="counter" label="Tasbih" />
-          <Tile to="/qibla" icon="compass" label="Qibla" />
-          <Tile to="/dua/morning-dhikr" icon="sunrise" label="Adhkar" />
-          <Tile to="/khatm" icon="calendar" label="Khatm" />
-          <Tile to="/tracker" icon="chart" label="Tracker" />
-          <Tile to="/hadith/lookup" icon="hadith" label="Lookup" />
-          <Tile to="/bookmarks" icon="bookmark" label="Saved" />
-        </div>
-      </Section>
 
       {events.length > 0 && (
         <Section title="Coming up">

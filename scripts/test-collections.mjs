@@ -11,6 +11,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT, DATA, log } from './_util.mjs'
+import { normalise } from './arabic.mjs'
 
 let failed = 0
 const fail = m => { failed++; console.log(`  ✗ ${m}`) }
@@ -58,6 +59,35 @@ for (const col of collections) {
     }
     if (!d.ar) fail(`${col.slug}: ${key} has no Arabic`)
     if (d.source) sourced++
+  }
+}
+
+/* ------------------- the same du'a must not appear twice ------------------ */
+
+// Reported from a phone: "on waking 1 and 2 are same, tahajjud 4 and 5 are same,
+// one is half and one is completed". They were — the same supplication sits in
+// two sections under two names, and a collection that referenced both listed it
+// as two numbered entries.
+//
+// The sections themselves are exempt: an `all:` collection is the app's own
+// arrangement of a source, where the bismillah before eating and the bismillah
+// before wudu really are two entries.
+const sameDua = (a, b) => {
+  if (!a || !b) return false
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a]
+  if (short.length < 10) return short === long
+  return long.includes(short) && short.length / long.length >= 0.7
+}
+
+for (const col of collections) {
+  if (col.whole) continue
+  const texts = col.items.map(it => ({ it, n: normalise(cats.get(it.cat)?.get(it.id)?.ar || '') }))
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      if (sameDua(texts[i].n, texts[j].n)) {
+        fail(`${col.slug}: #${i + 1} "${texts[i].it.title}" and #${j + 1} "${texts[j].it.title}" are the same du'a`)
+      }
+    }
   }
 }
 

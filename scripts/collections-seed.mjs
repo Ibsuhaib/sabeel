@@ -21,7 +21,8 @@ export const GROUPS = [
   { id: 'turning', label: 'Turning back' },
   { id: 'feeling', label: 'However you are feeling' },
   { id: 'need', label: 'When you need something' },
-  { id: 'everyday', label: 'Everyday' }
+  { id: 'everyday', label: 'Everyday' },
+  { id: 'sections', label: 'The sections themselves' }
 ]
 
 export const COLLECTIONS = [
@@ -42,13 +43,11 @@ export const COLLECTIONS = [
     items: ['daily-dua/2', 'situational/14', 'morning-dhikr/5', 'morning-dhikr/6']
   },
   {
+    // The section entire, rather than a hand-picked subset of it. Picking meant
+    // choosing between two tellings of the tahlil that both belong here, and
+    // whichever lost was then in no collection at all and unreachable.
     slug: 'after-salah', title: 'After Salah', blurb: 'Said after each obligatory prayer',
-    group: 'times', scene: 'mat',
-    items: [
-      'dhikr-after-salah/1', 'dhikr-after-salah/2', 'dhikr-after-salah/3', 'dhikr-after-salah/4',
-      'dhikr-after-salah/5', 'dhikr-after-salah/6', 'dhikr-after-salah/7', 'dhikr-after-salah/8',
-      'dhikr-after-salah/9', 'dhikr-after-salah/13', 'aurad/1', 'aurad/2'
-    ]
+    group: 'times', scene: 'mat', all: 'dhikr-after-salah'
   },
 
   /* ------------------------------- turning back ------------------------- */
@@ -157,5 +156,23 @@ export const COLLECTIONS = [
     slug: 'out-and-about', title: 'Out & About', blurb: 'The market, clothes, a sneeze',
     group: 'everyday', scene: 'lamp',
     items: ['situational/23', 'daily-dua/20', 'daily-dua/21', 'daily-dua/32', 'daily-dua/33', 'daily-dua/34']
-  }
+  },
+
+  /* ---------------------------- the sections ---------------------------- */
+  // The app's own arrangement, in the same form as everything else. These used
+  // to be a separate grid of plain tiles below the cards, which meant Tahajjud
+  // appeared twice in two different styles — once as a card and once as a tile —
+  // and looked like two features rather than one.
+  //
+  // `all` takes the section entire and in its own order, so adding a du'a to a
+  // section puts it here too without anyone remembering to.
+  { slug: 'morning-adhkar', title: 'Morning Adhkar', blurb: 'After Fajr until sunrise', group: 'sections', scene: 'sunrise-hills', all: 'morning-dhikr' },
+  { slug: 'evening-adhkar', title: 'Evening Adhkar', blurb: 'After Asr until Maghrib', group: 'sections', scene: 'dusk-hills', all: 'evening-dhikr' },
+  { slug: 'daily', title: 'Daily Duas', blurb: 'Waking, eating, leaving home, sleep', group: 'sections', scene: 'day-arc', all: 'daily-dua' },
+  { slug: 'selected', title: 'Selected Duas', blurb: 'From the Quran and Sunnah', group: 'sections', scene: 'star-field', all: 'selected-dua' },
+  { slug: 'salawat', title: 'Salawat', blurb: 'Blessings upon the Prophet ﷺ', group: 'sections', scene: 'crescent-star', all: 'salawat' },
+  { slug: 'aurad', title: 'Aurad', blurb: 'Counted litanies kept up daily', group: 'sections', scene: 'beads', all: 'aurad' },
+  { slug: 'from-the-quran', title: 'Duas in the Quran', blurb: 'The supplications of the Prophets', group: 'sections', scene: 'book-open', all: 'quran-dua' },
+  { slug: 'hajj-umrah', title: 'Hajj & Umrah', blurb: 'Talbiyah, tawaf, Safa and Marwah', group: 'sections', scene: 'kaaba', all: 'hajj-umrah' },
+  { slug: 'every-situation', title: 'Every Situation', blurb: 'Travel, rain, illness, distress, debt', group: 'sections', scene: 'signpost', all: 'situational' }
 ]

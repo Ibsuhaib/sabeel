@@ -51,7 +51,19 @@ const SCENES = {
   bowl: ['sand', Bowl],
   dome: ['teal', Dome],
   rain: ['slate', Rain],
-  lamp: ['plum', Lamp]
+  lamp: ['plum', Lamp],
+
+  // The sections, in the same style — so the app's own arrangement and the
+  // by-the-feeling one look like one feature rather than two.
+  'sunrise-hills': ['dawn', SunriseHills],
+  'dusk-hills': ['plum', DuskHills],
+  'day-arc': ['teal', DayArc],
+  'star-field': ['night', StarField],
+  'crescent-star': ['green', CrescentStar],
+  beads: ['sand', Beads],
+  'book-open': ['deep', BookOpen],
+  kaaba: ['slate', Kaaba],
+  signpost: ['olive', Signpost]
 }
 
 const GOLD = '#E3B657'
@@ -390,6 +402,111 @@ function Lamp() {
       <circle cx="80" cy="88" r="30" fill={GOLD} opacity="0.14" />
       <line x1="80" y1="14" x2="80" y2="44" stroke={PALE} strokeWidth="2.5" opacity="0.5" />
       <rect x="40" y="104" width="80" height="7" rx="3.5" fill="rgba(0,0,0,0.30)" />
+    </g>
+  )
+}
+
+function SunriseHills() {
+  return (
+    <g>
+      <circle cx="80" cy="66" r="22" fill={GOLD} />
+      <circle cx="80" cy="66" r="34" fill={GOLD} opacity="0.18" />
+      <path d="M0 78h44M116 78h44M0 90h30M130 90h30" stroke={GOLD} strokeWidth="3" strokeLinecap="round" opacity="0.55" />
+      <path d="M0 120c22-26 40-26 58-8s34 18 60-6 42-10 42-10v24z" fill="rgba(0,0,0,0.32)" />
+    </g>
+  )
+}
+
+function DuskHills() {
+  return (
+    <g>
+      {stars([[30, 20, 1.2], [58, 12, 1], [110, 22, 1], [136, 14, 1.1]])}
+      <circle cx="80" cy="74" r="20" fill={GOLD} opacity="0.9" />
+      <path d="M0 84h48M112 84h48" stroke={GOLD} strokeWidth="3" strokeLinecap="round" opacity="0.4" />
+      <path d="M0 120c26-22 46-22 66-6s38 12 94-14v20z" fill="rgba(0,0,0,0.42)" />
+    </g>
+  )
+}
+
+function DayArc() {
+  return (
+    <g>
+      <path d="M18 100a62 62 0 0 1 124 0" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="3" strokeDasharray="5 7" />
+      <circle cx="80" cy="40" r="17" fill={GOLD} />
+      <circle cx="30" cy="92" r="6" fill={PALE} opacity="0.7" />
+      <circle cx="130" cy="92" r="6" fill={PALE} opacity="0.4" />
+      <rect x="0" y="104" width="160" height="16" fill="rgba(0,0,0,0.28)" />
+    </g>
+  )
+}
+
+function StarField() {
+  return (
+    <g>
+      {stars([[26, 26, 1.4], [52, 16, 1], [96, 22, 1.1], [130, 34, 1.3], [40, 60, 1], [118, 70, 1], [66, 92, 1.1], [142, 96, 1]])}
+      <path d="M80 36l8 17 19 3-14 13 4 19-17-9-17 9 4-19-14-13 19-3z" fill={GOLD} />
+    </g>
+  )
+}
+
+function CrescentStar() {
+  return (
+    <g>
+      <path d="M96 24a38 38 0 1 0 26 66 30 30 0 1 1-26-66z" fill={GOLD} />
+      <path d="M118 44l5 11 12 2-9 8 2 12-10-6-11 6 2-12-8-8 12-2z" fill={PALE} />
+    </g>
+  )
+}
+
+function Beads() {
+  return (
+    <g>
+      <path d="M36 42c22-16 66-16 88 0s16 46 0 56-66 10-88 0-22-40 0-56z" fill="none" stroke={PALE} strokeWidth="2.5" opacity="0.45" />
+      {[...Array(14)].map((_, i) => {
+        const a = (i / 14) * Math.PI * 2
+        return <circle key={i} cx={80 + Math.cos(a) * 46} cy={70 + Math.sin(a) * 30} r="5.5" fill={GOLD} opacity={0.65 + (i % 3) * 0.12} />
+      })}
+      <circle cx="80" cy="26" r="8" fill={PALE} />
+    </g>
+  )
+}
+
+function BookOpen() {
+  return (
+    <g>
+      <path d="M80 44c-12-10-30-12-44-10v56c14-2 32 0 44 10z" fill={PALE} opacity="0.92" />
+      <path d="M80 44c12-10 30-12 44-10v56c-14-2-32 0-44 10z" fill={PALE} opacity="0.75" />
+      <path d="M80 44v56" stroke="rgba(0,0,0,0.30)" strokeWidth="3" />
+      {[0, 1, 2].map(i => (
+        <g key={i}>
+          <line x1="46" y1={54 + i * 11} x2="70" y2={54 + i * 11} stroke="rgba(0,0,0,0.22)" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="90" y1={54 + i * 11} x2="114" y2={54 + i * 11} stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      ))}
+      <circle cx="80" cy="24" r="7" fill={GOLD} />
+    </g>
+  )
+}
+
+function Kaaba() {
+  return (
+    <g>
+      <path d="M50 44l30-14 30 14v50l-30 14-30-14z" fill="#12181F" stroke={GOLD} strokeWidth="2" />
+      <path d="M50 44l30 14 30-14" fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="2" />
+      <path d="M80 58v50" stroke="rgba(255,255,255,0.18)" strokeWidth="2" />
+      <rect x="50" y="62" width="60" height="7" fill={GOLD} opacity="0.9" />
+      <rect x="22" y="104" width="116" height="8" rx="4" fill="rgba(0,0,0,0.35)" />
+    </g>
+  )
+}
+
+function Signpost() {
+  return (
+    <g>
+      <line x1="80" y1="26" x2="80" y2="108" stroke={PALE} strokeWidth="6" strokeLinecap="round" />
+      <path d="M78 34H36l-12 11 12 11h42z" fill={GOLD} />
+      <path d="M82 62h46l12 11-12 11H82z" fill={GOLD} opacity="0.75" />
+      <rect x="54" y="106" width="52" height="7" rx="3.5" fill="rgba(0,0,0,0.32)" />
     </g>
   )
 }

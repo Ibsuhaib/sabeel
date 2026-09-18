@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon.jsx'
 import Tooltip from './Tooltip.jsx'
+import { parentOf } from '../lib/up.js'
 
 export function Screen({ children, className = '' }) {
   return <div className={`min-h-full pb-24 ${className}`}>{children}</div>
@@ -18,11 +19,12 @@ const isolate = v =>
 
 export function Header({ title, subtitle, back, actions, sticky = true, large = false }) {
   const nav = useNavigate()
+  const loc = useLocation()
   return (
     <header className={`${sticky ? 'sticky top-0 z-30' : ''} safe-t bg-bg/92 backdrop-blur-md border-b border-line`}>
       <div className="flex items-center gap-2 px-3 h-14">
         {back && (
-          <button onClick={() => nav(-1)} aria-label="Go back" className="tap -ml-1 p-2 rounded-full text-muted hover:text-ink active:bg-surf">
+          <button onClick={() => nav(parentOf(loc.pathname) || '/')} aria-label="Go back" className="tap -ml-1 p-2 rounded-full text-muted hover:text-ink active:bg-surf">
             <Icon name="back" size={22} />
           </button>
         )}
