@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.provider.Settings;
 
 import com.getcapacitor.JSObject;
+import com.getcapacitor.Logger;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -180,7 +181,7 @@ public class LocationPlugin extends Plugin {
                     if (done[0]) return;
                     done[0] = true;
                 }
-                handler.post(() -> { try { lm.removeUpdates(this); } catch (Exception ignored) {} });
+                try { lm.removeUpdates(this); } catch (Exception ignored) {}
                 call.resolve(toJS(location));
             }
 
@@ -190,31 +191,48 @@ public class LocationPlugin extends Plugin {
             @Override public void onProviderDisabled(String provider) {}
         };
 
-        handler.post(() -> {
-            try {
-                boolean any = false;
-                for (String p : lm.getProviders(true)) {
-                    if (LocationManager.PASSIVE_PROVIDER.equals(p)) continue;
-                    lm.requestLocationUpdates(p, 0, 0, listener, Looper.getMainLooper());
-                    any = true;
-                }
-                if (!any) {
-                    call.reject("No location provider is available.", "unavailable");
-                    return;
-                }
-            } catch (SecurityException e) {
-                call.reject("Location permission was refused.", "denied");
-                return;
+        // The timeout is armed BEFORE anything that can throw.
+        //
+        // It used to be registered after the loop below, and getProviders(true)
+        // can return a provider that requestLocationUpdates then refuses —
+        // "fused" on some devices throws IllegalArgumentException. Only
+        // SecurityException was caught, so the exception escaped the lambda, the
+        // timeout was never reached, and the call settled neither way: the app
+        // sat on "Getting your location…" for ever. A promise that never settles
+        // is worse than any error, because nothing downstream can recover from it.
+        handler.postDelayed(() -> {
+            synchronized (done) {
+                if (done[0]) return;
+                done[0] = true;
             }
+            try { lm.removeUpdates(listener); } catch (Exception ignored) {}
+            call.reject("Could not get a fix in time.", "timeout");
+        }, timeout);
 
-            handler.postDelayed(() -> {
-                synchronized (done) {
-                    if (done[0]) return;
-                    done[0] = true;
+        handler.post(() -> {
+            int asked = 0;
+            SecurityException refused = null;
+            for (String p : lm.getProviders(true)) {
+                if (LocationManager.PASSIVE_PROVIDER.equals(p)) continue;
+                try {
+                    lm.requestLocationUpdates(p, 0, 0, listener, Looper.getMainLooper());
+                    asked++;
+                } catch (SecurityException e) {
+                    refused = e;
+                } catch (Throwable t) {
+                    // One provider refusing is not the end of the attempt; the
+                    // others may still answer. Only all of them failing is.
+                    Logger.warn("Sabeel", "provider " + p + " refused updates: " + t.getMessage());
                 }
-                try { lm.removeUpdates(listener); } catch (Exception ignored) {}
-                call.reject("Could not get a fix in time.", "timeout");
-            }, timeout);
+            }
+            if (asked > 0) return;   // the timeout above is now the only way out
+
+            synchronized (done) {
+                if (done[0]) return;
+                done[0] = true;
+            }
+            if (refused != null) call.reject("Location permission was refused.", "denied");
+            else call.reject("No location provider is available.", "unavailable");
         });
     }
 

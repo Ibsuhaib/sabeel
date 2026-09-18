@@ -98,9 +98,15 @@ export async function locate({ highAccuracy = true, timeout = 15000 } = {}) {
   // path as well — and that path had been working. An extra way to get a
   // position must never be able to remove the one that was already there, so
   // anything it does is remembered and then stepped over.
+  //
+  // Given a shorter slice than the whole budget: there is a WebView attempt and
+  // a retry behind this one, and three full-length timeouts in a row is the best
+  // part of a minute staring at "Getting your location…", which reads as a hang
+  // whatever the app is really doing. In practice this returns at once anyway
+  // when the phone has a recent fix.
   let nativeFailure = null
   try {
-    const native = await nativePosition({ timeout })
+    const native = await nativePosition({ timeout: Math.min(timeout, 10000) })
     if (native) return native
   } catch (e) {
     nativeFailure = e

@@ -110,6 +110,19 @@ if (!src.includes('let nativeFailure = null')) {
 }
 if (!failed) log('  a native failure falls through to the WebView instead of ending the attempt')
 
+// And it must not be able to hang. A bridge call that settles neither way left
+// the app on "Getting your location…" for ever, with nothing to retry and no
+// error to show — the worst failure of the three, because nothing downstream can
+// recover from it.
+const nat = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'native.js'), 'utf8')
+if (!nat.includes('withDeadline')) {
+  fail('the native call is not bounded, so a plugin that never answers hangs the app for ever')
+}
+if (!/withDeadline\(p\.getPosition/.test(nat)) {
+  fail('getPosition is not the call being bounded')
+}
+if (!failed) log('  the native call cannot hang: it is raced against a deadline of our own')
+
 // The Android side must accept Approximate. Capacitor treats an alias holding
 // several permissions as all-or-nothing — its own comment says so — and from
 // Android 12 the dialog grants coarse while refusing fine, which then read as a

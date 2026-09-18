@@ -78,11 +78,33 @@ export async function openLocationSettings() {
  * @throws  an Error with `.code` of 'denied' | 'servicesOff' | 'timeout' |
  *          'unavailable' | 'unsupported'
  */
+function withDeadline(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(Object.assign(new Error('The location service did not answer.'), { code: 'timeout' })),
+      ms
+    )
+    promise.then(
+      v => { clearTimeout(timer); resolve(v) },
+      e => { clearTimeout(timer); reject(e) }
+    )
+  })
+}
+
 export async function nativePosition({ timeout = 15000, maximumAge = 300000 } = {}) {
   const p = await sabeelLocation()
   if (!p) return null
   try {
-    const r = await p.getPosition({ timeout, maximumAge })
+    // Raced against a deadline of our own.
+    //
+    // A bridge call that never settles is the worst failure there is: the app
+    // waits for ever on "Getting your location…" with nothing to retry and no
+    // error to show. That happened — an exception inside the plugin skipped the
+    // timeout it was supposed to arm — and while that bug is fixed, the app
+    // should not be relying on the other side of a bridge to always answer.
+    // The grace is on top of the timeout the plugin is given, so in the normal
+    // case the plugin's own answer always wins.
+    const r = await withDeadline(p.getPosition({ timeout, maximumAge }), timeout + 5000)
     return {
       lat: r.latitude,
       lng: r.longitude,
