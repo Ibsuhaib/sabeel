@@ -71,20 +71,51 @@ export default function Notifications() {
 
   const patch = p => set({ notifications: { ...n, ...p } })
 
+  // Reported from a phone: tapping this did nothing at all — no permission
+  // dialog, no error, the same screen. It could do that in three ways. priming
+  // the audio was awaited outside any catch, and constructing an AudioContext
+  // throws on some WebViews; requestPermission can answer 'unsupported', which
+  // matched neither branch below; and anything either of them threw took the
+  // whole handler down. A button that can quietly do nothing is worse than one
+  // that fails, because there is nothing to report and nothing to try next.
   async function enable() {
-    await prime()                       // unlock audio from this very tap
-    const result = await requestPermission()
+    // Best-effort, and never the reason the rest does not run: this only lifts
+    // the autoplay restriction so the adhan can sound later.
+    try { await prime() } catch { /* the permission matters more than the sound */ }
+
+    let result
+    try {
+      result = await requestPermission()
+    } catch (e) {
+      setMsg({ tone: 'warn', text: `Could not ask for notification permission: ${e?.message || 'unknown error'}.` })
+      return
+    }
+
     setPerm(result)
+
     if (result === 'granted') {
       patch({ enabled: true })
       setMsg({ tone: 'ok', text: 'Notifications are on. Send a test below to be sure they actually arrive on this phone.' })
-    } else if (result === 'denied') {
+      return
+    }
+
+    if (result === 'denied') {
       // Where to go differs entirely: an address-bar padlock does not exist on a
       // phone, and Android's own settings are not where a browser keeps this.
       setMsg({ tone: 'warn', text: native
         ? 'Android is blocking notifications for Sabeel. Turn them on in Settings → Apps → Sabeel → Notifications, then come back.'
         : 'Your browser is blocking notifications for this site. Allow them in the site settings — the padlock icon in the address bar — then come back.' })
+      return
     }
+
+    // Anything else — 'unsupported', 'prompt', or a value a future plugin
+    // version invents. Say so rather than leaving the screen unchanged.
+    setMsg({
+      tone: 'warn',
+      text: native
+        ? `Android did not answer the permission request (${result || 'no answer'}). Allow notifications in Settings → Apps → Sabeel → Notifications, then come back — the settings below can be set either way.`
+        : `This browser did not answer the permission request (${result || 'no answer'}).`
+    })
   }
 
   async function preview() {
@@ -159,7 +190,7 @@ export default function Notifications() {
         </div>
       )}
 
-      {perm !== 'granted' ? (
+      {perm !== 'granted' && (
         <div className="px-4 pt-4">
           <Card className="p-5">
             <Icon name="prayer" size={24} className="text-brand" />
@@ -177,8 +208,14 @@ export default function Notifications() {
             </p>
           </Card>
         </div>
-      ) : (
-        <>
+      )}
+
+      {/* Everything below used to sit in the other half of a ternary, so until
+          notifications were allowed there was no way to even look at the adhan
+          choice — and if the permission request failed, no way ever. The settings
+          are yours to set whenever; they simply do not fire until Android has
+          been asked. */}
+      <>
           <div className="px-4 pt-4">
             <Card className="divide-y divide-line">
               <Toggle
@@ -371,8 +408,7 @@ export default function Notifications() {
               )}
             </>
           )}
-        </>
-      )}
+      </>
 
       {/* The second sentence is the part that differs: inside the APK it is
           Android's alarm manager holding the schedule, not the browser, and
