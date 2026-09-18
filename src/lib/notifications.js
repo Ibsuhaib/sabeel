@@ -19,7 +19,7 @@
 import { timesFor, PRAYERS, FARD } from './prayer.js'
 import { prayerSound } from './settings.jsx'
 import { dateKey, fmtTime } from './format.js'
-import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission, testNative } from './native.js'
+import { isNative, scheduleNative, cancelNative, requestNativePermission, nativePermission, testNative, nativeDiagnostics } from './native.js'
 
 const FIRED_KEY = 'sabeel.notified.v1'
 // How far ahead to work out prayer times.
@@ -318,6 +318,24 @@ export async function sendTest(settings) {
     return { ok: true, via: reg ? 'service worker' : 'page' }
   } catch (e) {
     return { ok: false, reason: e.message }
+  }
+}
+
+/**
+ * Everything the app can find out about why notifications may not be arriving.
+ *
+ * Read back from the system rather than from what this code believes it did, so
+ * it can be trusted when the two disagree — which is the case worth diagnosing.
+ */
+export async function diagnose(settings) {
+  const n = settings.notifications || {}
+  const items = upcoming(settings, new Date(), (await isNative()) ? NATIVE_HORIZON_HOURS : HORIZON_HOURS)
+  return {
+    ...(await nativeDiagnostics()),
+    enabledInApp: Boolean(n.enabled),
+    hasLocation: Boolean(settings.location),
+    wouldSchedule: items.length,
+    soonest: items[0] ? items[0].at.toISOString() : null
   }
 }
 

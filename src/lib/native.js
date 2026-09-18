@@ -314,6 +314,77 @@ function allSameMode(settings) {
   return modes.size === 1 ? [...modes][0] : 'adhan'
 }
 
+/**
+ * What Android actually thinks is going on.
+ *
+ * "Notifications are on but nothing arrives" is the commonest complaint about
+ * every prayer app, and from the outside it is indistinguishable between a
+ * dozen causes: the permission, the plugin, a channel that failed to create, an
+ * alarm the OEM dropped, a battery saver. Guessing at it from a description has
+ * already cost this app two wrong fixes, so the app can now be asked.
+ *
+ * Every field is a fact read back from the system rather than what this code
+ * believes it did.
+ */
+export async function nativeDiagnostics() {
+  const out = { native: await isNative() }
+  if (!out.native) return out
+
+  const LN = await notifications()
+  out.plugin = Boolean(LN)
+  if (!LN) return out
+
+  try {
+    const p = await LN.checkPermissions()
+    out.permission = p.display
+  } catch (e) { out.permission = `error: ${e?.message || e}` }
+
+  try {
+    const { channels } = await LN.listChannels()
+    out.channels = (channels || []).map(c => ({ id: c.id, importance: c.importance, sound: c.sound || null }))
+  } catch (e) { out.channels = `error: ${e?.message || e}` }
+
+  try {
+    const { notifications: pending } = await LN.getPending()
+    out.pending = (pending || []).length
+    out.next = (pending || [])
+      .map(n => n.schedule?.at)
+      .filter(Boolean)
+      .sort()
+      .slice(0, 3)
+  } catch (e) { out.pending = `error: ${e?.message || e}` }
+
+  try {
+    out.exactAlarms = await exactAlarmsAllowed()
+  } catch { /* older plugin */ }
+
+  return out
+}
+
+// Whether Android will honour an exact alarm. Below Android 12 it always will;
+// above it, this is a permission the user or the manufacturer can withhold, and
+// without it a prayer can arrive minutes late or be batched away entirely.
+async function exactAlarmsAllowed() {
+  const LN = await notifications()
+  if (!LN?.checkExactNotificationSetting) return 'unknown'
+  const r = await LN.checkExactNotificationSetting()
+  return r?.exact_alarm || 'unknown'
+}
+
+/**
+ * Open Android's "Alarms & reminders" setting for this app.
+ *
+ * From Android 12 this is a permission that can be withheld, and without it a
+ * prayer notification is not an exact alarm any more: Android is free to batch
+ * it with whatever else it is delivering, which on a sleeping phone can mean
+ * minutes late or not until the screen comes on.
+ */
+export async function openExactAlarmSetting() {
+  const LN = await notifications()
+  if (!LN?.changeExactNotificationSetting) return false
+  try { await LN.changeExactNotificationSetting(); return true } catch { return false }
+}
+
 export async function cancelNative() {
   const LN = await notifications()
   if (!LN) return false

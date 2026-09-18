@@ -14,6 +14,7 @@ import { Screen, Header, Card, Section, Toggle, Choice, Button, Empty } from '..
 import Icon from '../components/Icon.jsx'
 import PrayerSound, { MODES } from '../components/PrayerSound.jsx'
 import { useIsNative } from '../lib/useNative.js'
+import NotifyDiagnostics from '../components/NotifyDiagnostics.jsx'
 
 const SOUNDS = [
   { id: 'adhan', label: 'Adhan', note: 'The full call to prayer' },
@@ -232,6 +233,26 @@ export default function Notifications() {
             </Card>
           </div>
 
+          {/* Switched on, and nothing actually armed. That combination used to
+              show only as a quiet "0 prayers armed" in the line above, which is
+              easy to read past — and it is the whole failure, so it says so. */}
+          {n.enabled && status && (status.osArmed ?? status.armed) === 0 && (
+            <div className="px-4 pt-3">
+              <Card className="p-4 border-amber-500/40">
+                <p className="text-xs font-semibold text-amber-500 flex items-center gap-1.5">
+                  <Icon name="warn" size={14} />Nothing is actually scheduled
+                </p>
+                <p className="text-[11px] text-muted mt-1.5 leading-relaxed">
+                  {status.error
+                    ? `Android refused the schedule: ${status.error}`
+                    : !settings.location
+                      ? 'There is no location set, so there are no prayer times to schedule from.'
+                      : 'Notifications are on but Android is holding no alarms. The check below says why.'}
+                </p>
+              </Card>
+            </div>
+          )}
+
           {n.enabled && (
             <>
               <Section title="Sound">
@@ -363,6 +384,8 @@ export default function Notifications() {
                     </div>
                   </div>
                 </Card>
+
+                <NotifyDiagnostics settings={settings} />
 
                 <Card className="mx-4 mt-3 p-4">
                   <p className="text-xs font-semibold mb-2">If notifications stop arriving</p>
