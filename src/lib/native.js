@@ -328,7 +328,7 @@ export async function nativeDiagnostics() {
 // Whether Android will honour an exact alarm. Below Android 12 it always will;
 // above it, this is a permission the user or the manufacturer can withhold, and
 // without it a prayer can arrive minutes late or be batched away entirely.
-async function exactAlarmsAllowed() {
+export async function exactAlarmsAllowed() {
   const LN = await notifications()
   if (!LN?.checkExactNotificationSetting) return 'unknown'
   const r = await LN.checkExactNotificationSetting()

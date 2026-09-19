@@ -11,11 +11,13 @@ public class MainActivity extends BridgeActivity {
         // Before super.onCreate, which is where the bridge is built from
         // bridgeBuilder — after that the plugin would not be found.
         //
-        // This one only reads the Location switch and opens its settings page.
-        // Nothing here fetches a position; navigator.geolocation still does that,
-        // untouched, because it was working and three attempts to improve on it
-        // were three regressions.
+        // Both read state and open settings screens. Neither fetches anything
+        // or schedules anything: a position still comes from
+        // navigator.geolocation and an alarm still from the notifications
+        // plugin, untouched, because putting native code in front of the
+        // location path broke it three times over.
         registerPlugin(LocationSettingsPlugin.class);
+        registerPlugin(AlarmReliabilityPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

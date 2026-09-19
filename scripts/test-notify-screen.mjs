@@ -77,5 +77,43 @@ if (!failed) log('  every way the button can end says what happened, including t
 
 /* --------------------------------- done ---------------------------------- */
 
+/* ---------------- the reliability bridge matches the plugin --------------- */
+
+// A method named on the JS side that the Java does not have fails at the bridge,
+// is caught, and turns into `false` — so the button does nothing, which is the
+// exact failure this screen exists to stop. The names are checked against each
+// other rather than trusted.
+const bridge = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'reliability.js'), 'utf8')
+const javaPath = path.join(ROOT, 'android/app/src/main/java/app/sabeel/quran/AlarmReliabilityPlugin.java')
+
+if (fs.existsSync(javaPath)) {
+  const java = fs.readFileSync(javaPath, 'utf8')
+  const native = new Set([...java.matchAll(/public void (\w+)\(PluginCall/g)].map(m => m[1]))
+  const called = new Set([...bridge.matchAll(/opener\('(\w+)'\)/g)].map(m => m[1]))
+  called.add('status')
+
+  for (const name of called) {
+    if (!native.has(name)) fail(`reliability.js calls ${name}(), which AlarmReliabilityPlugin does not have`)
+  }
+  if (!failed) log(`  ${called.size} reliability methods, every one of them present in the plugin`)
+
+  // And it must be registered, before super.onCreate, or none of them exist.
+  // Comments stripped first. MainActivity explains *why* registration comes
+  // before super.onCreate, and that sentence contains the words — so scanning
+  // the raw text put the comment before the call and reported the opposite of
+  // the truth. The third time this project has been caught reading prose as code.
+  const main = fs.readFileSync(path.join(ROOT, 'android/app/src/main/java/app/sabeel/quran/MainActivity.java'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  if (!main.includes('registerPlugin(AlarmReliabilityPlugin.class)')) {
+    fail('AlarmReliabilityPlugin is never registered, so every one of its methods fails at the bridge')
+  }
+  const reg = main.indexOf('registerPlugin(AlarmReliabilityPlugin.class)')
+  const sup = main.indexOf('super.onCreate')
+  if (reg >= 0 && sup >= 0 && reg > sup) {
+    fail('plugins are registered after super.onCreate, which is too late for the bridge to see them')
+  }
+}
+
 if (failed) { console.log(`\n  ${failed} problem(s).`); process.exit(1) }
 log('  Nothing on this screen can be tapped to no effect, and nothing is locked away.')

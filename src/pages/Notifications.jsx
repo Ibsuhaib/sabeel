@@ -15,6 +15,7 @@ import Icon from '../components/Icon.jsx'
 import PrayerSound, { MODES } from '../components/PrayerSound.jsx'
 import { useIsNative } from '../lib/useNative.js'
 import NotifyDiagnostics from '../components/NotifyDiagnostics.jsx'
+import AlarmReliability from '../components/AlarmReliability.jsx'
 
 const SOUNDS = [
   { id: 'adhan', label: 'Adhan', note: 'The full call to prayer' },
@@ -389,6 +390,12 @@ export default function Notifications() {
                     </div>
                   </div>
                 </Card>
+
+                {/* Which of this phone's switches are actually in the way, and
+                    the screen that fixes each. Above the generic advice, which
+                    is a list of things that might be wrong on some phone
+                    somewhere; this one knows. */}
+                <AlarmReliability />
 
                 <NotifyDiagnostics settings={settings} />
 
