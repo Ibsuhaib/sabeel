@@ -135,9 +135,14 @@ export default function Notifications() {
   async function test() {
     const r = await sendTest(settings)
     setMsg(r.ok
-      ? { tone: 'ok', text: r.delayed
-          ? 'Sent — it should appear in a moment. If nothing arrives, your phone is suppressing it: see the note below.'
-          : 'Sent. If nothing appeared, your phone is suppressing it — see the note below.' }
+      ? { tone: 'ok', text: r.verified
+          // Read back from Android rather than assumed, so if it still does not
+          // appear the alarm existed and something after that swallowed it —
+          // which is a different problem with a different fix.
+          ? 'Sent, and Android is holding it. It should appear in a moment. If it does not, your phone is suppressing notifications — see the note below.'
+          : r.delayed
+            ? 'Sent — it should appear in a moment. If nothing arrives, your phone is suppressing it: see the note below.'
+            : 'Sent. If nothing appeared, your phone is suppressing it — see the note below.' }
       : { tone: 'warn', text: r.reason })
     if (r.ok) preview()
   }

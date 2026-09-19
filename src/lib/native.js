@@ -217,6 +217,9 @@ export async function scheduleNative(items, settings) {
 // Scheduled a moment out rather than shown immediately, so it arrives through
 // the same alarm path a prayer does and demonstrates that path rather than a
 // different one.
+// Far above any prayer's id, which are day*100 + slot.
+const TEST_ID = 2147483000
+
 export async function testNative(settings = {}) {
   const LN = await notifications()
   if (!LN) return { ok: false, reason: 'Notifications are not available on this device.' }
@@ -230,7 +233,7 @@ export async function testNative(settings = {}) {
   try {
     await LN.schedule({
       notifications: [{
-        id: 2147483000,                        // far above any prayer's id
+        id: TEST_ID,
         title: 'Sabeel test notification',
         body: 'If you can see this, notifications work on this device. Prayer times will arrive the same way.',
         channelId: channel.id,
@@ -241,7 +244,26 @@ export async function testNative(settings = {}) {
         extra: { kind: 'test', url: '/#/notifications' }
       }]
     })
-    return { ok: true, via: 'Android', delayed: true }
+    // Read it back rather than take the schedule call's word for it.
+    //
+    // "Sent" was an assumption: the call resolved, so the app said it had gone.
+    // Android can accept a schedule and hold nothing — a channel that failed to
+    // create, a manufacturer's own limit — and then the app is claiming
+    // something it never checked, while the person waits for a notification that
+    // was never going to arrive.
+    let held = null
+    try {
+      const { notifications } = await LN.getPending()
+      held = (notifications || []).some(n => Number(n.id) === TEST_ID)
+    } catch { /* older plugin; the claim just stays unverified */ }
+
+    if (held === false) {
+      return {
+        ok: false,
+        reason: 'Android accepted the request and then kept no alarm for it. Use “Check what Android has” below — that says which part refused.'
+      }
+    }
+    return { ok: true, via: 'Android', delayed: true, verified: held === true }
   } catch (e) {
     return { ok: false, reason: e.message }
   }
