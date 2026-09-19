@@ -10,10 +10,14 @@ import { Screen, Header, Card, Section, Toggle, Choice, Button, Sheet, Stepper }
 import Icon from '../components/Icon.jsx'
 import { ICON_STYLES } from '../lib/iconStyles.js'
 import { locate as getFix, describeAccuracy } from '../lib/locate.js'
+import LocationError from '../components/LocationError.jsx'
+import CityPicker from '../components/CityPicker.jsx'
 
 export default function Settings() {
   const { settings, set, setAdjustment, reset } = useSettings()
   const [sheet, setSheet] = useState(null)
+  const [locating, setLocating] = useState(false)
+  const [locError, setLocError] = useState(null)
   const [msg, setMsg] = useState(null)
   const fileRef = useRef(null)
   const nav = useNavigate()
@@ -43,12 +47,15 @@ export default function Settings() {
     }
   }
 
+  // The error is kept as an object, not flattened to its message, because
+  // LocationError needs the code to know whether to offer the settings button.
   function useMyLocation() {
-    setMsg('Locating…')
+    setLocating(true)
+    setLocError(null)
     getFix()
-      .then(loc => set({ location: loc }))
-      .catch(e => setMsg(e.message))
-      .then(() => setMsg(m => (m === 'Locating…' ? null : m)))
+      .then(loc => { set({ location: loc }); setMsg('Location updated.') })
+      .catch(e => setLocError(e))
+      .finally(() => setLocating(false))
   }
 
   const method = METHODS.find(m => m.id === settings.method)
@@ -81,12 +88,32 @@ export default function Settings() {
               </>
             )}
           </div>
-          <button onClick={useMyLocation} className="tap w-full px-4 py-3 text-left text-sm text-brand">
-            <Icon name="location" size={15} className="inline mr-2 -mt-0.5" />Use my current location
+          <button onClick={useMyLocation} disabled={locating} className="tap w-full px-4 py-3 text-left text-sm text-brand disabled:opacity-60">
+            <Icon name="location" size={15} className="inline mr-2 -mt-0.5" />
+            {locating ? 'Locating…' : 'Use my current location'}
           </button>
         </Card>
-        <p className="text-[11px] text-muted px-6 mt-2">
+
+        <div className="px-4">
+          <LocationError error={locError} onRetry={useMyLocation} />
+        </div>
+
+        {/* A city can always be chosen, whatever the live fix does. Without this
+            the only place a location could be set was the first run, so anyone
+            whose fix failed afterwards was stuck with whatever they had — and
+            prayer times are computed from it, so being stuck matters. */}
+        <div className="px-4">
+          <CityPicker onPick={city => {
+            set({ location: { ...city, source: 'city' }, method: city.method })
+            setLocError(null)
+            setMsg(`Location set to ${city.label}.`)
+          }} />
+        </div>
+
+        <p className="text-[11px] text-muted px-6 mt-3 leading-relaxed">
           Your coordinates stay on this device. There is no server to send them to.
+          A live fix is more accurate than a city centre, which can be tens of
+          kilometres out — enough to move Fajr and Maghrib by a few minutes.
         </p>
       </Section>
 
