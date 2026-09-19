@@ -78,72 +78,9 @@ is(calls.length, 2, 'exactly two attempts')
 // phone wording is checked against the source, since that is what people read.
 const src = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'locate.js'), 'utf8')
 const phone = /servicesOff: '([^']+)'/.exec(src)?.[1] || ''
+if (!/Location tile/i.test(phone)) fail('the phone message does not say where to turn Location on')
 if (/pick a city/i.test(phone)) fail('the phone message still tells people to give up and pick a city')
-if (!/switched off/i.test(phone)) fail('the phone message does not say the switch is off')
-
-// Telling someone where the tile lives was the first attempt, and a poor one —
-// every manufacturer puts it somewhere different. The app opens the page itself
-// now, so the message states the fact and the button does the work.
-const err = fs.readFileSync(path.join(ROOT, 'src', 'components', 'LocationError.jsx'), 'utf8')
-if (!err.includes('openLocationSettings')) fail('there is no way to open the location settings')
-if (!err.includes('visibilitychange')) {
-  fail('coming back from settings does not retry, so the error stays on screen after being fixed')
-}
-if (!/native === true/.test(err)) fail('the settings button is not held back from the web, where it does nothing')
-if (!failed) log(`  the switch being off offers a button to the settings page, and retries on return`)
-
-// And the native path has to be tried before the WebView's, which is the whole
-// point — the WebView reported a grant and then produced no fix.
-if (!/const native = await nativePosition/.test(src)) {
-  fail('locate() does not ask Android first, so the APK is still on WebView geolocation')
-}
-
-// It must be a fallback and not a replacement. The first version rethrew
-// whatever the native side said, so one failure there took the WebView path away
-// as well — and that path had been working. That regression is the one that
-// mattered, so it is checked directly.
-if (!src.includes('nativeFailure = e')) {
-  fail('a native failure is not stepped over, so it can still take the WebView path down with it')
-}
-if (!src.includes('let nativeFailure = null')) {
-  fail('locate() does not remember the native failure to report later')
-}
-if (!failed) log('  a native failure falls through to the WebView instead of ending the attempt')
-
-// And it must not be able to hang. A bridge call that settles neither way left
-// the app on "Getting your location…" for ever, with nothing to retry and no
-// error to show — the worst failure of the three, because nothing downstream can
-// recover from it.
-const nat = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'native.js'), 'utf8')
-if (!nat.includes('withDeadline')) {
-  fail('the native call is not bounded, so a plugin that never answers hangs the app for ever')
-}
-if (!/withDeadline\(p\.getPosition/.test(nat)) {
-  fail('getPosition is not the call being bounded')
-}
-if (!failed) log('  the native call cannot hang: it is raced against a deadline of our own')
-
-// The Android side must accept Approximate. Capacitor treats an alias holding
-// several permissions as all-or-nothing — its own comment says so — and from
-// Android 12 the dialog grants coarse while refusing fine, which then read as a
-// refusal of a request the user had actually allowed.
-const plugin = path.join(ROOT, 'android/app/src/main/java/app/sabeel/quran/LocationPlugin.java')
-if (fs.existsSync(plugin)) {
-  // Comments stripped first. The plugin explains in prose why it does *not* use
-  // getPermissionState, and scanning the raw text found that sentence and called
-  // it the bug — the same way check-imports.mjs once matched "Icon.jsx" inside a
-  // comment and reported a missing import.
-  const java = fs.readFileSync(plugin, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
-  if (java.includes('getPermissionState("location")')) {
-    fail('the plugin checks permission through the alias, which fails when only Approximate was granted')
-  }
-  if (!java.includes('ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED')) {
-    fail('the plugin does not accept coarse location on its own')
-  }
-  if (!failed) log('  approximate location counts as granted, which is what Android 12 hands back')
-}
+if (!failed) log(`  the phone is told exactly where to look: "${phone.slice(0, 58)}…"`)
 
 /* --------------------------------- done ---------------------------------- */
 

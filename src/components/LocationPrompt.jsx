@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useSettings } from '../lib/settings.jsx'
 import { locate, locationGranted, describeAccuracy } from '../lib/locate.js'
 import Icon from './Icon.jsx'
-import LocationError from './LocationError.jsx'
 
 // Offers to swap a city-centre guess for an actual fix, on the two screens where
 // the difference shows: prayer times and the qibla.
@@ -40,7 +39,7 @@ export default function LocationPrompt({ what = 'Prayer times' }) {
     try {
       set({ location: await locate() })
     } catch (e) {
-      setError(e)
+      setError(e.message)
     } finally {
       setBusy(false)
     }
@@ -63,7 +62,7 @@ export default function LocationPrompt({ what = 'Prayer times' }) {
             with a fix from the device.
           </p>
 
-          <LocationError error={error} onRetry={use} />
+          {error && <p className="text-[11px] text-amber-500 mt-2 leading-relaxed">{error}</p>}
 
           <div className="flex items-center gap-2 mt-2.5">
             <button

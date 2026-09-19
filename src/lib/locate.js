@@ -12,7 +12,7 @@
 // manifest declares; ACCESS_COARSE_LOCATION and ACCESS_FINE_LOCATION are added
 // by scripts/android-setup.mjs for exactly this reason.
 
-import { isNative, nativePosition, locationServicesEnabled } from './native.js'
+import { isNative } from './native.js'
 
 export const LOCATION_SOURCE = {
   gps: 'Device location',
@@ -52,29 +52,10 @@ function fix({ highAccuracy, timeout }) {
 // be had, it is the device switch and not the app. This matters because the
 // message for both used to be "Location is unavailable right now. Pick a city
 // instead", which tells someone to give up when the fix is one toggle away.
-// Which of two failures to tell someone about.
-//
-// Android saying the switch is off is a fact; the web API's timeout is only the
-// symptom of it. Where the native side knew something definite, that is the one
-// worth showing.
-function worseOf(nativeErr, webErr) {
-  if (!nativeErr) return webErr
-  if (nativeErr.code === 'servicesOff' || nativeErr.code === 'denied') return nativeErr
-  return webErr
-}
-
 async function explain(e) {
   let code = e.code
+  if (code === 'unavailable' && await locationGranted()) code = 'servicesOff'
   const native = await isNative().catch(() => false)
-
-  // In the app this is a fact rather than an inference: ask whether the switch
-  // is on. On the web it has to stay an inference — permission granted and still
-  // no fix means the device, not the page.
-  if (code === 'unavailable' || code === 'timeout') {
-    const on = await locationServicesEnabled()
-    if (on === false) code = 'servicesOff'
-    else if (on === null && code === 'unavailable' && await locationGranted()) code = 'servicesOff'
-  }
   const message = code === 'servicesOff' && !native ? MESSAGE.servicesOffDesktop : MESSAGE[code]
   return Object.assign(new Error(message), { code })
 }
@@ -85,35 +66,8 @@ async function explain(e) {
  * @throws {Error} with `.code`: 'unsupported' | 'denied' | 'servicesOff' | 'unavailable' | 'timeout'
  */
 export async function locate({ highAccuracy = true, timeout = 15000 } = {}) {
-  // Inside the APK, ask Android before asking the WebView.
-  //
-  // The WebView's geolocation reports a granted permission and then produces no
-  // fix, and gives nothing to diagnose with either, because the web API cannot
-  // say whether the device's Location switch is even on. Android's own
-  // LocationManager can, asks every provider at once instead of waiting on
-  // satellites, and will take a recent fix immediately.
-  //
-  // It is a *fallback*, not a replacement. The first version of this rethrew
-  // whatever the native side said, so one failure there took away the WebView
-  // path as well — and that path had been working. An extra way to get a
-  // position must never be able to remove the one that was already there, so
-  // anything it does is remembered and then stepped over.
-  //
-  // Given a shorter slice than the whole budget: there is a WebView attempt and
-  // a retry behind this one, and three full-length timeouts in a row is the best
-  // part of a minute staring at "Getting your location…", which reads as a hang
-  // whatever the app is really doing. In practice this returns at once anyway
-  // when the phone has a recent fix.
-  let nativeFailure = null
-  try {
-    const native = await nativePosition({ timeout: Math.min(timeout, 10000) })
-    if (native) return native
-  } catch (e) {
-    nativeFailure = e
-  }
-
   if (!navigator.geolocation) {
-    throw await explain(nativeFailure || Object.assign(new Error(MESSAGE.unsupported), { code: 'unsupported' }))
+    throw Object.assign(new Error(MESSAGE.unsupported), { code: 'unsupported' })
   }
 
   try {
@@ -128,17 +82,17 @@ export async function locate({ highAccuracy = true, timeout = 15000 } = {}) {
       try {
         return await fix({ highAccuracy: false, timeout: Math.max(timeout, 20000) })
       } catch (second) {
-        throw await explain(worseOf(nativeFailure, second))
+        throw await explain(second)
       }
     }
-    throw await explain(worseOf(nativeFailure, e))
+    throw await explain(e)
   }
 }
 
 const MESSAGE = {
   denied: 'Location permission was refused. You can pick a city instead, or allow location in your device settings.',
   timeout: 'Could not get a fix in time. Try again near a window, or pick a city.',
-  servicesOff: 'Location is switched off on this phone. Turn it on and Sabeel will find you — it never leaves the device.',
+  servicesOff: 'Location is switched off on this phone. Swipe down from the top of the screen, turn on the Location tile, then tap Use my location again.',
   servicesOffDesktop: 'Location services are switched off on this device. Turn them on in your system settings, then try again.',
   unavailable: 'Location is unavailable right now. Check that Location is switched on in your device settings, or pick a city instead.',
   unsupported: 'This device has no location support. Pick a city instead.'
